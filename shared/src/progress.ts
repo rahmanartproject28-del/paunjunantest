@@ -29,7 +29,7 @@ function rngFrom(seed: number) { let s = seed || 1; return () => ((s = Math.imul
 /** Jenis ikan yang bisa ditangkap pada level ini, dengan bobot kelangkaan dari stok spot. */
 function reachableSpecies(lv: number) {
   const w = new Map<SpeciesId, number>();
-  for (const s of DEFAULT_SPOTS) if (s.minLv <= lv) for (const [k, n] of Object.entries(s.stock)) w.set(k as SpeciesId, (w.get(k as SpeciesId) ?? 0) + (n ?? 0));
+  for (const s of DEFAULT_SPOTS) if ((s.recLv ?? s.minLv) <= lv) for (const [k, n] of Object.entries(s.stock)) w.set(k as SpeciesId, (w.get(k as SpeciesId) ?? 0) + (n ?? 0));
   return [...w.entries()].filter(([, n]) => n > 0);
 }
 

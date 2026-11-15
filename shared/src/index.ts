@@ -11,3 +11,4 @@ export * from './progress';
 export * from './offline';
 export * from './lock';
 export * from './auto';
+export * from './trade';

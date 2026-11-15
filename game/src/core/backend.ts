@@ -7,17 +7,24 @@ import {
 /** foto latar (besar) disimpan di kunci localStorage terpisah: dokumen → kunci */
 const BD_KEYS: [string, string][] = [['backdrop', 'backdropImg'], ['backdrop_belakang', 'backdropBack'], ['backdrop_dasar', 'backdropBed']];
 import { store } from './store';
-import { Social, AdminService, Billing, applySpeciesEdits, type GameEvent, type SpeciesEdits, type Look, type Listing, type Club, type GameConfig, type AuditRow, type SpeciesId } from '@paunjunan/shared';
+import { Social, Trades, sideValue, emptySide, BAITS as BAIT_DEFS, RODS as ROD_DEFS, type Trade, type TradeSide, type TradeBoard, AdminService, Billing, applySpeciesEdits, type GameEvent, type SpeciesEdits, type Look, type Listing, type Club, type GameConfig, type AuditRow, type SpeciesId } from '@paunjunan/shared';
 type P = Promise<{ player: Player }>;
 export type TourInfo = Awaited<ReturnType<Social['tournaments']>>[number];
 export type ClubsInfo = Awaited<ReturnType<Social['clubs']>>;
+export type TradeInv = Awaited<ReturnType<Trades['inventory']>>;
+export interface TradePartner { id: string; name: string; lv?: number; npc?: boolean }
+export type ListArgs = { kind: 'rod' | 'line' | 'bait'; item: string; price: number; qty?: number };
 /** Fitur Fase 3 & 4 — bentuk panggilan sama di mode lokal dan server. */
 export interface SocialApi {
   setLook(look: Partial<Look>): Promise<{ player: Player; spent: number }>;
   tournaments(): Promise<TourInfo[]>; joinTournament(kind: 'harian' | 'mingguan'): P;
   claimTournaments(): Promise<{ player: Player; rewards: { name: string; rank: number; coins: number }[] }>;
   toAquarium(id: string): P; fromAquarium(id: string, to: 'lepas' | 'jual'): P; buyBigAquarium(): P; claimVisitors(): Promise<{ player: Player; coins: number }>;
-  market(): Promise<Listing[]>; listItem(a: { kind: 'rod' | 'line'; item: string; price: number }): P; cancelListing(id: string): P; buyListing(id: string): P;
+  market(): Promise<Listing[]>; listItem(a: ListArgs): P; cancelListing(id: string): P; buyListing(id: string): P;
+  /** Tukar langsung antarpemain (umpan, joran, senar, koin). */
+  tradeBoard(): Promise<TradeBoard>; tradeInventory(id: string): Promise<TradeInv>;
+  proposeTrade(a: { to: string; give: TradeSide; want: TradeSide; note?: string }): Promise<{ player: Player; trade: Trade }>;
+  acceptTrade(id: string): Promise<{ player: Player; trade: Trade }>; declineTrade(id: string): Promise<{ player: Player; trade: Trade }>; cancelTrade(id: string): Promise<{ player: Player; trade: Trade }>;
   progress(): Promise<{ player: Player; dailyReady: boolean }>;
   claimMission(id: string): Promise<{ player: Player; coins: number; xp: number; bonus: number }>;
   claimDaily(): Promise<{ player: Player; coins: number; day: number; streak: number; bait: { bait: string; n: number } | null }>;
@@ -72,8 +79,10 @@ export class LocalBackend implements Backend {
   private bdSaved: Record<string, string> = {};
   private bill = new Billing(this.st, async (_p, t) => ({ state: t.startsWith('uji-') ? 0 : 1, orderId: t }));
   redeemCoins(productId: string, token: string) { return this.bill.redeem(this.pid, productId, token); }
-  private A: Authority; private S: Social;
+  private A: Authority; private S: Social; private T: Trades;
   private pid: string;
+  /** kabar tukar (mode lokal: jawaban pedagang simulasi) */
+  onTrade: (kind: 'baru' | 'diterima' | 'ditolak', name: string) => void = () => {};
   /** ns: awalan kunci simpanan (mesin luring memakai simpanan terpisah); gainMul: pengali koin & XP; social: misi/turnamen ikut dihitung */
   constructor(weather: () => WeatherId, private ns = '', private gainMul = 1, private social = true) {
     this.pid = store.get<string>(ns + 'pid', '');
@@ -90,6 +99,7 @@ export class LocalBackend implements Backend {
     }, 400); };
     this.A = new Authority({ store: this.st, rng: Math.random, weather, rates: () => this.adm.effRates(), priceMul: () => this.adm.effPriceMul() * this.gainMul, xpMul: () => this.adm.effXpMul() * this.gainMul, auto: () => this.adm.effAuto(), ignoreLevelLock: true /* mode lokal: uji semua lokasi */ });
     this.S = new Social({ store: this.st });
+    this.T = new Trades({ store: this.st });
     this.seedSocial();
     this.seedRivals();
   }
@@ -151,9 +161,61 @@ export class LocalBackend implements Backend {
   buyBigAquarium() { return this.S.buyBigAquarium(this.pid); }
   claimVisitors() { return this.S.claimVisitors(this.pid); }
   market() { return this.S.market(); }
-  listItem(a: { kind: 'rod' | 'line'; item: string; price: number }) { return this.S.listItem(this.pid, a); }
+  listItem(a: ListArgs) { return this.S.listItem(this.pid, a); }
   cancelListing(id: string) { return this.S.cancelListing(this.pid, id); }
   buyListing(id: string) { return this.S.buyListing(this.pid, id); }
+  // ---------- tukar: mode lokal berdagang dengan pemancing simulasi ----------
+  private static NPC_TRADERS: { id: string; name: string; rods: RodId[]; bait: Partial<Record<BaitId, number>> }[] = [
+    { id: 'npct_darto', name: 'Pak Darto', rods: ['bambu', 'tegar', 'belida'], bait: { cacing: 60, lumut: 40, racik: 30 } },
+    { id: 'npct_rina', name: 'Rina.Mancing', rods: ['karbon', 'predator'], bait: { udang: 60, pelet: 80, anakan: 25 } },
+    { id: 'npct_ahong', name: 'Koh Ahong', rods: ['surf', 'laut'], bait: { cumi: 50, udang: 40 } },
+  ];
+  private async npcReady() {
+    for (const n of LocalBackend.NPC_TRADERS) {
+      let p = await this.st.getPlayer(n.id); const fresh = !p;
+      if (!p) p = this.A.newPlayer(n.id, n.name);
+      p.xp = Math.max(p.xp, 8000); p.coins = Math.max(p.coins, 3000);
+      for (const r of n.rods) if (!p.rods.includes(r) && (fresh || Math.random() < 0.15)) p.rods.push(r);
+      for (const [k, v] of Object.entries(n.bait)) if ((p.bait[k as BaitId] ?? 0) < 10) p.bait[k as BaitId] = v;
+      await this.st.savePlayer(p);
+    }
+  }
+  private lastNpcOffer = -1;
+  /** Sesekali pedagang simulasi menawarkan sesuatu (supaya layar tukar bisa dicoba tanpa server). */
+  private async npcMaybeOffer(me: Player, incoming: Trade[]) {
+    const t = Date.now() / 1000;
+    if (this.lastNpcOffer < 0) this.lastNpcOffer = store.get<number>(this.ns + 'npcOffer', 0);
+    if (incoming.length || t - this.lastNpcOffer < 600 || Math.random() > 0.5) return;
+    this.lastNpcOffer = t; store.set(this.ns + 'npcOffer', t);
+    const n = LocalBackend.NPC_TRADERS[Math.floor(Math.random() * LocalBackend.NPC_TRADERS.length)], np = (await this.st.getPlayer(n.id))!;
+    const give = emptySide(), want = emptySide();
+    const rod = np.rods.find(r => r !== 'pemula' && r !== np.curRod && !me.rods.includes(r));
+    if (rod && Math.random() < 0.5) { give.rods = [rod]; want.coins = Math.round(ROD_DEFS[rod].price * 0.8); }
+    else { const k = Object.keys(n.bait)[Math.floor(Math.random() * Object.keys(n.bait).length)] as BaitId, q = 10 + Math.floor(Math.random() * 3) * 5; give.bait = { [k]: q }; want.coins = Math.max(5, Math.round(q * BAIT_DEFS[k].price / BAIT_DEFS[k].pack * 0.85)); }
+    if (me.coins < want.coins) { const b = (Object.entries(me.bait).find(([, v]) => (v ?? 0) >= 10)); if (!b) return; want.coins = 0; want.bait = { [b[0]]: 10 }; }
+    try { await this.T.propose(n.id, { to: this.pid, give, want, note: 'Mau tukar, Gan?' }); this.onTrade('baru', n.name); } catch { /* tidak cocok, lain kali */ }
+  }
+  async tradeBoard() {
+    await this.npcReady();
+    const b = await this.T.board(this.pid);
+    await this.npcMaybeOffer(b.player, b.incoming);
+    return this.T.board(this.pid).then(x => ({ ...x, got: [...b.got, ...x.got] }));
+  }
+  tradeInventory(id: string) { return this.T.inventory(id); }
+  tradePartners(): TradePartner[] { return LocalBackend.NPC_TRADERS.map(n => ({ id: n.id, name: n.name, lv: 20, npc: true })); }
+  async proposeTrade(a: { to: string; give: TradeSide; want: TradeSide; note?: string }) {
+    const r = await this.T.propose(this.pid, a);
+    if (r.trade.to.startsWith('npct_')) setTimeout(async () => {
+      // pedagang simulasi: setuju bila nilai yang ia terima ≥ 90% nilai yang ia berikan (harga toko)
+      const fair = sideValue(r.trade.give) >= sideValue(r.trade.want) * 0.9;
+      try { if (fair) await this.T.accept(r.trade.to, r.trade.id); else await this.T.decline(r.trade.to, r.trade.id); this.onTrade(fair ? 'diterima' : 'ditolak', r.trade.toName); }
+      catch { try { await this.T.decline(r.trade.to, r.trade.id); this.onTrade('ditolak', r.trade.toName); } catch { /* sudah dibatalkan */ } }
+    }, 2500 + Math.random() * 2000);
+    return r;
+  }
+  acceptTrade(id: string) { return this.T.accept(this.pid, id); }
+  async declineTrade(id: string) { return this.T.decline(this.pid, id); }
+  cancelTrade(id: string) { return this.T.cancel(this.pid, id); }
   clubs() { return this.S.clubs(this.pid); }
   progress() { return this.S.progress(this.pid); }
   claimMission(id: string) { return this.S.claimMission(this.pid, id); }
@@ -171,10 +233,10 @@ export class LocalBackend implements Backend {
       d.items = d.items.filter(x => !x.seller.startsWith('npc') || x.at + 3 * 86400 > now);
       const npc = d.items.filter(x => x.seller.startsWith('npc')).length;
       const names = ['RajaNila', 'MasGabus', 'SiPatin', 'Joran77', 'UdinKeramba', 'Andi.Pancing'];
-      const goods: [Listing['kind'], string, number][] = [['rod', 'bambu', 90], ['rod', 'karbon', 260], ['rod', 'tegar', 520], ['rod', 'predator', 1300], ['line', 'l30', 45], ['line', 'pe', 140], ['line', 'pe8', 380]];
+      const goods: [Listing['kind'], string, number][] = [['bait', 'cumi', 70], ['bait', 'anakan', 60], ['bait', 'racik', 35], ['rod', 'bambu', 90], ['rod', 'karbon', 260], ['rod', 'tegar', 520], ['rod', 'predator', 1300], ['line', 'l30', 45], ['line', 'pe', 140], ['line', 'pe8', 380]];
       for (let i = npc; i < 8; i++) {
         const [kind, item, base] = goods[Math.floor(Math.random() * goods.length)], rare = Math.random() < 0.18;
-        d.items.push({ id: 'npc' + now.toFixed(0) + i, seller: 'npc' + i, sellerName: names[i % names.length], kind, item, price: Math.round(base * (rare ? 0.55 : 0.8 + Math.random() * 0.4)), at: now - Math.random() * 86400, rare });
+        d.items.push({ id: 'npc' + now.toFixed(0) + i, seller: 'npc' + i, sellerName: names[i % names.length], kind, item, price: Math.round(base * (rare ? 0.55 : 0.8 + Math.random() * 0.4)), at: now - Math.random() * 86400, rare: kind !== 'bait' && rare, ...(kind === 'bait' ? { qty: 10 } : {}) });
       }
       return d;
     });
@@ -263,7 +325,13 @@ export class RemoteBackend implements Backend {
   buyBigAquarium() { return this.call<{ player: Player }>('/api/aquarium/big', {}); }
   claimVisitors() { return this.call<{ player: Player; coins: number }>('/api/aquarium/visitors', {}); }
   async market() { return (await this.call<{ items: Listing[] }>('/api/market')).items; }
-  listItem(a: { kind: 'rod' | 'line'; item: string; price: number }) { return this.call<{ player: Player }>('/api/market/list', a); }
+  listItem(a: ListArgs) { return this.call<{ player: Player }>('/api/market/list', a); }
+  tradeBoard() { return this.call<TradeBoard>('/api/trade', {}); }
+  tradeInventory(id: string) { return this.call<TradeInv>('/api/trade/inventory?id=' + encodeURIComponent(id)); }
+  proposeTrade(a: { to: string; give: TradeSide; want: TradeSide; note?: string }) { return this.call<{ player: Player; trade: Trade }>('/api/trade/propose', a); }
+  acceptTrade(id: string) { return this.call<{ player: Player; trade: Trade }>('/api/trade/accept', { id }); }
+  declineTrade(id: string) { return this.call<{ player: Player; trade: Trade }>('/api/trade/decline', { id }); }
+  cancelTrade(id: string) { return this.call<{ player: Player; trade: Trade }>('/api/trade/cancel', { id }); }
   cancelListing(id: string) { return this.call<{ player: Player }>('/api/market/cancel', { id }); }
   buyListing(id: string) { return this.call<{ player: Player }>('/api/market/buy', { id }); }
   clubs() { return this.call<ClubsInfo>('/api/clubs'); }

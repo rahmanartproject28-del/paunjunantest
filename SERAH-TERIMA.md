@@ -1,10 +1,10 @@
-# SERAH TERIMA — PAUNJUNAN v2 · versi 0.9.9
+# SERAH TERIMA — PAUNJUNAN v2 · versi 0.10.0
 
-> Diperbarui 15 November 2026 (v0.9.9). Untuk melanjutkan di akun Claude lain, lampirkan di percakapan baru:
+> Diperbarui 15 November 2026 (v0.10.0). Untuk melanjutkan di akun Claude lain, lampirkan di percakapan baru:
 > 1. **`PAUNJUNAN-LENGKAP-v0.9.7.zip`** — WAJIB. Isi: `1-game-dan-server/` (kode game + server + shared + aset game + alat uji offline), `2-website-ci4/` (website peringkat + panel pengelola, CodeIgniter 4.7), prototipe siap main, dokumen ini, `REKAP-FITUR-PAUNJUNAN.md`, `ASET-BACA-DULU.md`, `PANDUAN-GERAKAN-DAN-KENYAMANAN.md`.
 > 2. (hanya bila mau memasang aset/animasi tambahan) paket aset, dipecah 5 berkas supaya tiap berkas di bawah batas unggah 30 MB: `aset-1-animasi.zip`, `aset-2-ikan-air-efek-suara.zip`, `aset-3-langit.zip`, `aset-4-tanah.zip`, `aset-5-properti.zip`. `tools/make-motion.py` butuh `aset-1-animasi.zip` (folder `1-animasi-avatar/rpm-pria`; nama subfolder `idle/` dan `locomotion/` sama dengan aslinya).
 >
-> Lalu tulis: *"Lanjutkan proyek PAUNJUNAN v2 sesuai SERAH-TERIMA.md."* Bagian 0 (yang terbaru ada di akhir bagian itu: v0.9.9) dan bagian 7–8 berisi keadaan terakhir dan pekerjaan berikutnya.
+> Lalu tulis: *"Lanjutkan proyek PAUNJUNAN v2 sesuai SERAH-TERIMA.md."* Bagian 0 (yang terbaru ada di akhir bagian itu: v0.10.0) dan bagian 7–8 berisi keadaan terakhir dan pekerjaan berikutnya.
 > Prototipe terbit terakhir: artifact "PAUNJUNAN Mancing v0.9.5" (akun rahmanartproject28). Di akun lain tautan itu tidak bisa diperbarui — terbitkan artifact baru dari `game/dist-artifact/paunjunan.html` (cara di bagian 3).
 
 ---
@@ -132,6 +132,14 @@ Folder `2-website-ci4/` (repo terpisah di sandbox: `/home/claude/web/paunjunan-w
 - **Bangunan & suasana** (`world/newmaps.ts`, `NewMapScape`, semua prosedural + InstancedMesh, tanpa berkas model): tepi kolam beton, saung ijuk, payung, kincir aerator berputar, lampu tali warna-warni, sawah; rumah lanting (rakit kayu, dinding bercat, atap seng, jendela menyala malam), klotok berlayar menyusuri sungai, eceng gondok, kabut rendah; pohon bakau berakar tunjang (3 varian), akar napas, jembatan papan berpagar, panggung pandang, gazebo, nipah; pulau karst jamur (Lambert, bukan Standard — pantulan langit membuatnya putih pucat), pondok apung, kano, karang warna-warni di dasar; tembok dermaga + bolder + ban, lampu jalan, dermaga beton bertiang pancang, kapal nelayan berlampu, pemecah ombak + tetrapod, mercusuar dengan sorot berputar, bagan + cahaya di air, kota berjendela menyala, gudang, derek.
 - Suara (`soundscape.ts`), peta mini (`ui/map.ts` MAP_BOUNDS), nama NPC (`crowd.ts`), label tepi & teks adu tarik (`fishing.ts`) mengikuti peta. Buka langsung: `?loc=kolam|gambut|bakau|laguna|pelabuhan`.
 - Saran aset tambahan (CC0, belum dipasang): Poly Haven (tekstur batu kapur/beton/kayu, HDRI senja), Kenney Watercraft Kit (perahu), OpenGameArt modular wooden docks, Quaternius (tumbuhan & properti).
+
+### v0.10.0 — Semua peta terbuka & tukar antarpemain
+- **Semua lokasi terbuka sejak Lv 1** (permintaan pemilik). `minLv` semua lokasi & spot = 1; angka lama disimpan sebagai `recLv` (saran level) — dipakai label "Saran level N+" di layar Lokasi dan pemilihan ikan misi harian (`progress.ts`), supaya pemain Lv 1 tidak diberi misi tuna/marlin.
+- **Tukar langsung antarpemain** (`shared/src/trade.ts`, kelas `Trades`): tukar umpan / joran / senar, atau jual-beli dengan koin (koin hanya boleh di satu sisi). Barang penawar DITAHAN saat penawaran dibuat; diterima → penerima langsung dapat, barang penerima masuk daftar kiriman di dokumen `trades` (atomik) dan diambil penawar saat membuka layar Tukar. Ditolak / dibatalkan / 24 jam tidak dijawab → titipan kembali utuh. Aturan: Lv ≥ 2 (`TRADE_MIN_LV`), maks 5 penawaran keluar & 20 masuk, satu penawaran menunggu per pasangan, joran/senar yang dipakai & barang bawaan tidak bisa, koin diterima dipotong 5% (`TRADE_FEE`, rem inflasi & jual-beli koin di luar game), pemain diblokir tidak bisa. Hapus akun → `Trades.forget`.
+- **Pasar**: kini juga **umpan per bungkus** (`kind: 'bait'`, `qty` 1–999, harga total). Hasil penjualan TIDAK lagi ditulis langsung ke data penjual dari permintaan pembeli (dulu bisa bentrok dengan permintaan penjual) → masuk `market.paid`, diambil penjual lewat `Social.collectPaid` (dipanggil di `progress` & layar Tukar).
+- Server: `POST /api/trade` (papan + ambil kiriman; POST supaya ikut kunci per pemain), `GET /api/trade/inventory?id=` (barang yang bisa ditawar, tanpa koin), `POST /api/trade/propose|accept|decline|cancel`, pesan WebSocket `{t:'trade', kind:'baru'|'diterima'|'ditolak'}` ke pemain yang dituju. Tidak ada perubahan skema MySQL (dokumen `pj_docs`).
+- Game: `ui/trade.ts` (Penawaran masuk/keluar, pilih pemain di sekitar / pernah bertukar, susun beri ⇄ minta dengan perkiraan harga toko), menu Tukar + Sosial → Tukar, kabar di toast & obrolan. **Mode lokal**: 3 pedagang simulasi (Pak Darto, Rina.Mancing, Koh Ahong) — menerima bila nilai yang mereka terima ≥ 90% nilai yang mereka beri, dan sesekali mengirim penawaran; supaya fitur bisa dicoba tanpa server.
+- Uji: `trade.test.ts` (6: tukar umpan↔joran, jual joran dengan koin + potongan, tolak/batal/kedaluwarsa, aturan, permintaan bersamaan tidak menggandakan barang), pasar umpan & `collectPaid` di `social.test.ts`, alur server + WebSocket di `server/src/app.test.ts` (hanya jalan di CI — paket server tidak terpasang di lingkungan luring).
 
 ## 1. Keputusan yang sudah disepakati
 

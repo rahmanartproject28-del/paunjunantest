@@ -8,6 +8,7 @@ export class Net {
   onCatch: (m: Extract<ServerMsg, { t: 'catch' }>) => void = () => {};
   onEmote: (m: Extract<ServerMsg, { t: 'emote' }>) => void = () => {};
   onError: (msg: string) => void = () => {};
+  onTrade: (m: Extract<ServerMsg, { t: 'trade' }>) => void = () => {};
   private players = new Map<string, NetPlayer>();
   private retry = 1000; private closed = false;
   constructor(private url: string, private token: string) {}
@@ -26,6 +27,7 @@ export class Net {
       else if (m.t === 'catch') this.onCatch(m);
       else if (m.t === 'emote') this.onEmote(m);
       else if (m.t === 'error') this.onError(m.msg);
+      else if (m.t === 'trade') this.onTrade(m);
     };
     this.ws.onclose = () => { if (!this.closed) setTimeout(() => this.connect(this.room), this.retry = Math.min(15000, this.retry * 2)); };
   }

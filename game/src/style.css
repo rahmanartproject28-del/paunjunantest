@@ -655,3 +655,25 @@ body.autofish #hud #aimHint { display: none; }
    sebagian WebView Android menimbulkan kedipan. Ganti dengan panel gelap biasa yang sedikit lebih pekat. */
 html.mobile *, html.mobile *::before, html.mobile *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 html.mobile { --glass: rgba(9, 13, 19, 0.74); --glass2: rgba(9, 13, 19, 0.88); }
+
+/* ---------- Tukar antarpemain ---------- */
+.tsec { margin: 10px 0 4px; font-weight: 800; font-size: 13px; }
+.tdim { color: var(--dim); font-size: 12px; margin: 4px 0; }
+.tcard { background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 14px; padding: 10px; margin-top: 8px; }
+.tcard .tHead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; } .tcard .tHead small { color: var(--dim); font-size: 11px; }
+.tnote { margin: 4px 0; font-style: italic; color: var(--dim); font-size: 12px; }
+.tgrid { display: grid; grid-template-columns: 1fr 24px 1fr; gap: 6px; align-items: start; margin-top: 6px; }
+.tgrid small { display: block; color: var(--dim); font-size: 11px; margin-bottom: 3px; }
+.tarrow { text-align: center; font-size: 18px; padding-top: 14px; color: var(--gold); }
+.tchip { display: inline-block; margin: 2px 4px 2px 0; padding: 4px 8px; border-radius: 999px; background: rgba(255,255,255,.08); font-size: 12px; font-weight: 700; }
+.tchip.gold { background: rgba(242,181,58,.22); color: var(--gold2); } .tchip.dim { color: var(--dim); }
+.tval { display: block; color: var(--dim); font-size: 11px; margin-top: 6px; }
+.tbuild { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tcol { background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 14px; padding: 4px 10px 10px; min-width: 0; }
+.trow { display: grid; grid-template-columns: 1fr 86px; gap: 8px; align-items: center; margin-top: 6px; font-size: 13px; }
+.trow small { color: var(--dim); font-size: 11px; } .trow .sel { padding: 6px 8px; font-size: 14px; width: 100%; }
+.trow.chk { grid-template-columns: 1fr 28px; } .trow.chk input { width: 22px; height: 22px; accent-color: var(--gold); justify-self: end; }
+.tsum { margin-top: 8px; padding: 8px 10px; border-radius: 12px; background: rgba(242,181,58,.08); border: 1px dashed rgba(242,181,58,.4); }
+.tsum small { display: block; color: var(--dim); font-size: 12px; margin-top: 2px; }
+@media (max-width: 520px) { .tbuild { grid-template-columns: 1fr; } }
+.hudBadge { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #e5484d; color: #fff; font-size: 10px; font-weight: 800; line-height: 16px; text-align: center; }

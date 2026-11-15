@@ -1,6 +1,7 @@
 // Fase 3 & 4 — aturan bersama (server dan mode lokal): kosmetik karakter, turnamen, akuarium,
 // pasar antarpemain, dan klub. Semua perubahan koin terjadi di sini, bukan di HP.
-import { SPECIES, RODS, LINES, type SpeciesId, type RodId, type LineId } from './data';
+import { SPECIES, RODS, LINES, BAITS, type SpeciesId, type RodId, type LineId, type BaitId } from './data';
+import { emptySide, giveSide, type Delivery } from './trade';
 import { GameError, type Player, type Store, type CatchRec } from './authority';
 import { cleanName } from './chat';
 import { applyCatch, ensureMissions, checkBadges, BADGES, DAILY_REWARDS, DAILY_BONUS_BAIT, GEMS, type Mission } from './progress';
@@ -117,8 +118,12 @@ export function aqVisitBonus(fish: CatchRec[]) { return 10 + fish.reduce((a, f) 
 export const aqValue = (fish: CatchRec[]) => fish.reduce((a, f) => a + f.value, 0);
 
 // ===================== Pasar =====================
-export interface Listing { id: string; seller: string; sellerName: string; kind: 'rod' | 'line'; item: string; price: number; at: number; rare?: boolean }
-interface MarketDoc { items: Listing[] }
+export type ListKind = 'rod' | 'line' | 'bait';
+/** Barang di lapak. Umpan dijual per bungkus `qty` butir dengan harga total `price`. */
+export interface Listing { id: string; seller: string; sellerName: string; kind: ListKind; item: string; price: number; at: number; rare?: boolean; qty?: number }
+/** paid: hasil penjualan yang menunggu diambil penjual (tidak menulis data penjual dari permintaan pembeli). */
+interface MarketDoc { items: Listing[]; paid?: Delivery[] }
+export const MARKET_MAX_BAIT = 999;
 export const MARKET_FEE = 0.1, MARKET_MIN = 5, MARKET_TTL = 3 * 86400, MARKET_MAX_PER = 5;
 
 // ===================== Klub =====================
@@ -232,6 +237,7 @@ export class Social {
   // ---------- progres: misi, hadiah harian, lencana ----------
   /** Siapkan misi hari ini & periksa lencana; dipanggil saat pemain membuka game / layar misi. */
   async progress(pid: string) {
+    await this.collectPaid(pid);
     const p = await this.player(pid);
     const before = JSON.stringify([p.missions?.day, p.badges]);
     ensureMissions(p, this.now()); checkBadges(p);
@@ -305,25 +311,45 @@ export class Social {
     const t = this.now(), d = await this.o.store.getDoc<MarketDoc>('market');
     return (d?.items ?? []).filter(x => x.at + MARKET_TTL > t).sort((a, b) => b.at - a.at);
   }
-  async listItem(pid: string, a: { kind: 'rod' | 'line'; item: string; price: number }) {
+  /** Ambil hasil penjualan lapak (koin) yang menunggu. */
+  async collectPaid(pid: string) {
+    const pre = await this.o.store.getDoc<MarketDoc>('market');
+    if (!pre?.paid?.some(x => x.to === pid)) return { coins: 0, n: 0 };
+    let coins = 0, n = 0;
+    await this.o.store.updateDoc<MarketDoc>('market', async cur => {
+      const d: MarketDoc = { items: cur?.items ?? [], paid: cur?.paid ?? [] }, mine = d.paid!.filter(x => x.to === pid);
+      if (!mine.length) return d;
+      const p = await this.player(pid); for (const g of mine) { coins += g.side.coins; n++; giveSide(p, g.side); }
+      await this.save(p); d.paid = d.paid!.filter(x => x.to !== pid); return d;
+    });
+    return { coins, n };
+  }
+  async listItem(pid: string, a: { kind: ListKind; item: string; price: number; qty?: number }) {
     const p = await this.player(pid), price = Math.floor(Number(a.price));
     if (!(price >= MARKET_MIN && price <= 100000)) throw new GameError(`Harga minimal ${MARKET_MIN} koin.`);
+    let qty: number | undefined;
     if (a.kind === 'rod') {
       const k = a.item as RodId; if (!RODS[k]) throw new GameError('Joran tidak dikenal.');
       if (!p.rods.includes(k)) throw new GameError('Joran tidak ada di tas.');
       if (k === 'pemula') throw new GameError('Joran pemula tidak bisa dijual.');
       if (p.curRod === k) throw new GameError('Ganti joran yang dipakai dulu.');
       p.rods = p.rods.filter(r => r !== k);
-    } else {
+    } else if (a.kind === 'line') {
       const k = a.item as LineId; if (!LINES[k]) throw new GameError('Senar tidak dikenal.');
       if (!p.lines.includes(k)) throw new GameError('Senar tidak ada di tas.');
       if (k === 'l20') throw new GameError('Senar bawaan tidak bisa dijual.');
       if (p.curLine === k) throw new GameError('Ganti senar yang dipakai dulu.');
       p.lines = p.lines.filter(r => r !== k);
-    }
-    const L: Listing = { id: this.id(), seller: pid, sellerName: p.name, kind: a.kind, item: a.item, price, at: this.now() };
+    } else if (a.kind === 'bait') {
+      const k = a.item as BaitId; if (!BAITS[k]) throw new GameError('Umpan tidak dikenal.');
+      qty = Math.floor(Number(a.qty));
+      if (!(qty >= 1 && qty <= MARKET_MAX_BAIT)) throw new GameError(`Jumlah umpan 1–${MARKET_MAX_BAIT}.`);
+      if ((p.bait[k] ?? 0) < qty) throw new GameError(`Umpan ${BAITS[k].name} di tas hanya ${p.bait[k] ?? 0}.`);
+      p.bait[k] = (p.bait[k] ?? 0) - qty;
+    } else throw new GameError('Jenis barang tidak dikenal.');
+    const L: Listing = { id: this.id(), seller: pid, sellerName: p.name, kind: a.kind, item: a.item, price, at: this.now(), ...(qty ? { qty } : {}) };
     await this.o.store.updateDoc<MarketDoc>('market', cur => {
-      const d = cur ?? { items: [] };
+      const d = { items: cur?.items ?? [], paid: cur?.paid ?? [] };
       if (d.items.filter(x => x.seller === pid && x.at + MARKET_TTL > this.now()).length >= MARKET_MAX_PER) throw new GameError(`Maksimal ${MARKET_MAX_PER} barang di lapak.`);
       d.items.push(L); return d;
     });
@@ -331,13 +357,14 @@ export class Social {
   }
   private giveItem(p: Player, L: Listing) {
     if (L.kind === 'rod') { if (!p.rods.includes(L.item as RodId)) p.rods.push(L.item as RodId); }
+    else if (L.kind === 'bait') p.bait[L.item as BaitId] = (p.bait[L.item as BaitId] ?? 0) + (L.qty ?? 1);
     else if (!p.lines.includes(L.item as LineId)) p.lines.push(L.item as LineId);
   }
   /** Tarik barang sendiri (atau yang kedaluwarsa) kembali ke tas. */
   async cancelListing(pid: string, id: string) {
     let L: Listing | undefined;
     await this.o.store.updateDoc<MarketDoc>('market', cur => {
-      const d = cur ?? { items: [] }, i = d.items.findIndex(x => x.id === id && x.seller === pid);
+      const d = { items: cur?.items ?? [], paid: cur?.paid ?? [] }, i = d.items.findIndex(x => x.id === id && x.seller === pid);
       if (i < 0) throw new GameError('Barang tidak ditemukan di lapak Anda.');
       L = d.items.splice(i, 1)[0]; return d;
     });
@@ -347,23 +374,22 @@ export class Social {
     await this.player(pid); // pembeli harus ada (galat 401 bila tidak)
     let L: Listing | undefined, buyer: Player | undefined;
     // Pembeli dibaca, dicek, dipotong koinnya, dan disimpan DI DALAM kunci dokumen pasar.
-    // Dulu pembeli dibaca sebelum kunci → dua pembelian bersamaan oleh orang yang sama sama-sama lolos cek koin.
+    // Koin penjual dicatat di daftar `paid` dokumen yang sama (atomik) dan diambil penjual sendiri —
+    // permintaan pembeli tidak pernah menulis data penjual (bisa bentrok dengan permintaan penjual yang berjalan bersamaan).
     await this.o.store.updateDoc<MarketDoc>('market', async cur => {
-      const d = cur ?? { items: [] }, i = d.items.findIndex(x => x.id === id);
+      const d = { items: cur?.items ?? [], paid: cur?.paid ?? [] }, i = d.items.findIndex(x => x.id === id);
       if (i < 0 || d.items[i].at + MARKET_TTL <= this.now()) throw new GameError('Barang sudah terjual atau ditarik.');
       if (d.items[i].seller === pid) throw new GameError('Tidak bisa membeli barang sendiri.');
-      const b = await this.player(pid);
-      if ((d.items[i].kind === 'rod' ? b.rods : b.lines as string[]).includes(d.items[i].item)) throw new GameError('Anda sudah punya barang ini.');
-      if (b.coins < d.items[i].price) throw new GameError('Koin tidak cukup.');
+      const b = await this.player(pid), it = d.items[i];
+      if (it.kind !== 'bait' && (it.kind === 'rod' ? b.rods : b.lines as string[]).includes(it.item)) throw new GameError('Anda sudah punya barang ini.');
+      if (b.coins < it.price) throw new GameError('Koin tidak cukup.');
       L = d.items.splice(i, 1)[0];
-      b.coins -= L.price; this.giveItem(b, L); await this.save(b); buyer = b;
+      b.coins -= L.price; this.giveItem(b, L);
+      if (!L.seller.startsWith('npc')) d.paid.push({ id: this.id(), to: L.seller, side: { ...emptySide(), coins: Math.floor(L.price * (1 - MARKET_FEE)) }, why: 'pasar', fromName: b.name, at: this.now() });
+      await this.save(b); buyer = b;
       return d;
     });
     if (!buyer || !L) throw new GameError('Pembelian gagal.');
-    if (!L!.seller.startsWith('npc')) {
-      const seller = await this.o.store.getPlayer(L!.seller);
-      if (seller) { seller.coins += Math.floor(L!.price * (1 - MARKET_FEE)); await this.save(seller); }
-    }
     return { player: buyer, bought: L! };
   }
 
@@ -424,5 +450,5 @@ export class Social {
   }
 }
 
-export const itemName = (kind: 'rod' | 'line', id: string) => kind === 'rod' ? RODS[id as RodId]?.name ?? id : LINES[id as LineId]?.name ?? id;
+export const itemName = (kind: ListKind, id: string) => kind === 'rod' ? RODS[id as RodId]?.name ?? id : kind === 'bait' ? 'Umpan ' + (BAITS[id as BaitId]?.name ?? id) : LINES[id as LineId]?.name ?? id;
 export const speciesName = (k: SpeciesId) => SPECIES[k]?.name ?? k;

@@ -22,6 +22,8 @@ import { Soundscape } from './core/soundscape';
 import { Coach } from './ui/coach';
 import { openSignIn, openSignUp, openPin, openAccount } from './ui/account';
 import { createSocialUI } from './ui/social';
+import { createTradeUI } from './ui/trade';
+import type { TradePartner } from './core/backend';
 import { createProgressUI } from './ui/progress';
 import { createEvents } from './ui/events';
 import { createShop } from './ui/shop';
@@ -186,7 +188,20 @@ let net: Net | null = null;
   let hudRef: ReturnType<typeof createHud> | null = null, avaInit = false, avaDirty = true;
   let lastP: Player | null = null;
   let progRef: ReturnType<typeof createProgressUI> | null = null;
+  // ---------- tukar antarpemain ----------
+  let netPlayers: TradePartner[] = [], tradeIn = 0;
+  const trade = createTradeUI({ backend, player: () => fishing.player, setPlayer: (pl) => fishing.setPlayer(pl),
+    partners: () => backend.mode === 'lokal' ? (backend as LocalBackend).tradePartners() : netPlayers,
+    onCount: (n) => { tradeIn = n; } });
+  /** kabar penawaran (server: lewat WebSocket; mode lokal: jawaban pedagang simulasi) */
+  const onTrade = (kind: 'baru' | 'diterima' | 'ditolak', name: string) => {
+    const msg = kind === 'baru' ? `📩 ${name} mengirim penawaran tukar. Buka Sosial → Tukar.` : kind === 'diterima' ? `✅ ${name} menerima penawaran Anda! Buka Tukar untuk mengambil barang.` : `↩️ ${name} menolak penawaran. Barang kembali saat Anda membuka Tukar.`;
+    if (kind === 'baru') tradeIn++;
+    toast(msg, 4500); chat.system(msg);
+  };
+  if (backend.mode === 'lokal') (backend as LocalBackend).onTrade = onTrade;
   const social = createSocialUI({
+    openTrade: () => trade.open('masuk'),
     backend, angler: fishing.angler, player: () => fishing.player, setPlayer: (pl) => fishing.setPlayer(pl),
     canEdit: () => fishing.canStand, showcase: (on) => { rig.showcase = on; }, confetti,
     aquarium3d: IS_DANAU ? (on, fish) => { world.aquarium.setFish(fish); world.aqWatch = on; rig.aqView = on ? world.aquarium.view : null; } : undefined,
@@ -220,6 +235,7 @@ let net: Net | null = null;
       ['🗺️', 'Peta', 'Spot & jalan', () => openMap()],
       ['📋', 'Misi & lencana', 'Hadiah harian', () => prog.openMissions(), Number($('missionBadge').textContent) || 0],
       ['🎪', 'Sosial', 'Turnamen, klub, pasar', () => social.openHub()],
+      ['🔁', 'Tukar', 'Umpan, joran, koin', () => trade.open('masuk'), tradeIn],
       ['💬', 'Obrolan', 'Dunia & klub', () => chat.show(), chat.unread],
       ['🏆', 'Peringkat', '& album ikan', () => openBoard()],
       ['👕', 'Karakter', 'Baju, topi, ransel', () => social.openCharacter()],
@@ -292,7 +308,8 @@ let net: Net | null = null;
     net?.close(); net = null;
     if (backend.mode !== 'server' || !backend.token || (hybrid && !hybrid.online)) return;
     net = new Net(serverUrl, backend.token);
-    net.onPlayers = (list) => crowd.sync(list, net!.you);
+    net.onPlayers = (list) => { crowd.sync(list, net!.you); netPlayers = list.filter(p => p.id !== net!.you).map(p => ({ id: p.id, name: p.name, lv: p.lv })); };
+    net.onTrade = (m) => onTrade(m.kind, m.name);
     net.onCatch = (m) => { toast(`${m.name} dapat ${m.species} ${fmtKg(m.weight)}!`); chat.system(`${m.name} dapat ${m.species} ${fmtKg(m.weight)}!`); };
     net.onChat = (m) => chat.push({ id: m.id, name: m.name, text: m.text, at: m.at, me: m.id === net?.you, ch: m.ch ?? 'global' });
     net.onEmote = (m) => crowd.say(m.id, m.e === 'sapa' ? '👋 Halo!' : m.e);
@@ -579,16 +596,15 @@ let net: Net | null = null;
     fishing.setSpot(id); rig.snap(fishing); $('spotTxt').textContent = fishing.spot.label;
     connectNet(); toast('Tiba di ' + fishing.spot.label + '.');
   }
-  /** Pilih lokasi: syarat level dari data bersama; mode lokal boleh diuji tanpa syarat. */
+  /** Pilih lokasi: semua peta terbuka sejak Lv 1; saran level hanya petunjuk tingkat kesulitan. */
   function openLocations() {
-    const lv = fishing.player ? levelInfo(fishing.player.xp).lv : 1, local = backend.mode === 'lokal';
+    const lv = fishing.player ? levelInfo(fishing.player.xp).lv : 1;
     openSheet('🌏 Pilih lokasi memancing', '<div class="list">' + LOCATIONS.map(l => {
-      const here = l.id === LOC, locked = lv < l.minLv;
-      return `<div class="item ${here ? 'on' : ''}"><span class="icn">${l.icon}</span><div><b>${esc(l.name)}</b><small>${esc(l.desc)}</small><small>${l.minLv > 1 ? (locked ? '🔒 Terbuka di level ' + l.minLv : '✅ Level ' + l.minLv + '+') : 'Untuk semua level'}</small></div>${here ? '<small>Di sini</small>' : `<button class="btn ${locked && !local ? 'ghost' : 'gold'}" data-go="${l.id}">${locked ? (local ? 'Uji' : '🔒') : 'Pergi'}</button>`}</div>`;
-    }).join('') + `</div><p style="color:var(--dim);font-size:11px">${local ? 'Mode lokal: lokasi terkunci boleh dicoba untuk uji coba. Di server, syarat level berlaku.' : 'Naikkan level dengan memancing untuk membuka lokasi baru.'}</p>`, body => {
+      const here = l.id === LOC, rec = l.recLv ?? 1, hard = lv < rec;
+      return `<div class="item ${here ? 'on' : ''}"><span class="icn">${l.icon}</span><div><b>${esc(l.name)}</b><small>${esc(l.desc)}</small><small>${rec > 1 ? (hard ? '⚠️ Saran level ' + rec + '+ (ikan lebih besar & kuat)' : '✅ Saran level ' + rec + '+') : 'Cocok untuk pemula'}</small></div>${here ? '<small>Di sini</small>' : `<button class="btn gold" data-go="${l.id}">Pergi</button>`}</div>`;
+    }).join('') + `</div><p style="color:var(--dim);font-size:11px">Semua lokasi terbuka untuk semua level. Saran level hanya petunjuk: di lokasi sulit, pakai joran & senar yang lebih kuat supaya ikan besar tidak lepas.</p>`, body => {
       body.querySelectorAll<HTMLElement>('[data-go]').forEach(b => b.onclick = () => {
         const L = LOCATIONS.find(x => x.id === b.dataset.go)!;
-        if (lv < L.minLv && !local) { toast(`${L.name} terbuka di level ${L.minLv}. Level Anda ${lv}.`); return; }
         if (!fishing.canStand) { toast('Selesaikan lemparan dulu.'); return; }
         store.set('loc', L.id); store.set('spot', L.start);
         $('loading').hidden = false; $('loadTxt').textContent = 'Berangkat ke ' + L.name + '…';
@@ -1060,7 +1076,7 @@ let net: Net | null = null;
   }
   requestAnimationFrame(loop);
 
-  (window as unknown as { __game: object }).__game = { social, fishing, rig, world, backend, crowd, walker, chat, coach, startGame, openBait, openBasket, openBoard, openSettings, openSpots, openMap, openWarung, goTo, fishHere, standUp };
+  (window as unknown as { __game: object }).__game = { social, trade, fishing, rig, world, backend, crowd, walker, chat, coach, startGame, openBait, openBasket, openBoard, openSettings, openSpots, openMap, openWarung, goTo, fishHere, standUp };
   // pengujian otomatis: ?auto=1 langsung masuk
   if (qs.has('auto')) { ($('nameIn') as HTMLInputElement).value = qs.get('name') ?? 'Penguji'; if (qs.get('spot')) pickSpot(qs.get('spot')!); await startGame(); if (qs.get('demo')) fishing.debugDemo(qs.get('demo') as 'trophy', (qs.get('sp') ?? 'toman') as never, Number(qs.get('kg') ?? 7.5)); rig.snap(fishing); }
 })().catch(e => showErr(String(e?.stack || e)));

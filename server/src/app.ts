@@ -9,7 +9,7 @@ import { websiteHtml } from './website';
 import { googlePlay } from './googlePlay';
 import { Accounts, MemoryAccounts, type AccountStore, type Mailer } from './accounts';
 import {
-  Authority, Social, AdminService, Billing, COIN_PACKS, GameError, MemoryStore, KeyedLock, isBanned, banMessage, cleanChat, cleanName, levelInfo, ROOM_CAPACITY, SNAP_HZ,
+  Authority, Social, Trades, AdminService, Billing, COIN_PACKS, GameError, MemoryStore, KeyedLock, isBanned, banMessage, cleanChat, cleanName, levelInfo, ROOM_CAPACITY, SNAP_HZ,
   type Store, type DocStore, type BackdropSlot, type ClientMsg, type ServerMsg, type NetPlayer, type WeatherId,
 } from '@paunjunan/shared';
 
@@ -22,6 +22,7 @@ export function buildServer(opts: ServerOptions = {}) {
   const admin = new AdminService(store, opts.now);
   const A = new Authority({ store, rng, weather: opts.weather ?? (() => 'cerah'), now: opts.now, rates: () => admin.effRates(), priceMul: () => admin.effPriceMul(), xpMul: () => admin.effXpMul(), auto: () => admin.effAuto() });
   const S = new Social({ store, now: opts.now ? () => opts.now!() : undefined });
+  const T = new Trades({ store, now: opts.now ? () => opts.now!() : undefined });
   const gp = googlePlay();
   const bill = gp ? new Billing(store, gp.verify, opts.now, gp.consume) : null;
   const acc = new Accounts({ players: store, store: opts.accounts ?? new MemoryAccounts(), newPlayer: (id, n) => A.newPlayer(id, n), now: opts.now, mailer: opts.mailer });
@@ -94,7 +95,12 @@ export function buildServer(opts: ServerOptions = {}) {
   app.post('/api/auth/reset', async (req) => { limit('reset:' + req.ip, 10, 900); const b = body(req); return ok(await acc.resetPassword(String(b.login ?? ''), String(b.code ?? ''), String(b.password ?? ''))); });
   app.post('/api/auth/logout', async (req) => { await acc.logout(tokenOf(req), body(req).device); return ok({}); });
   app.post('/api/auth/password', async (req) => { limit('pw:' + req.ip, 10, 600); const b = body(req); return ok(await acc.changePassword(tokenOf(req), String(b.old ?? ''), String(b.new ?? ''))); });
-  app.post('/api/account/delete', async (req) => { limit('del:' + req.ip, 5, 600); return ok(await acc.deleteAccount(tokenOf(req), body(req).password)); });
+  app.post('/api/account/delete', async (req) => {
+    limit('del:' + req.ip, 5, 600);
+    const pid = await acc.playerOf(tokenOf(req)), r = await acc.deleteAccount(tokenOf(req), body(req).password);
+    if (pid) await T.forget(pid).catch(() => {});   // penawaran tukar ditarik, titipan dikembalikan ke penawar
+    return ok(r);
+  });
 
   app.get('/api/me', async (req) => { const p = await store.getPlayer((await userOf(req))); return ok({ player: p }); });
   app.addHook('onReady', async () => { await admin.load(); });
@@ -178,7 +184,14 @@ export function buildServer(opts: ServerOptions = {}) {
   app.get('/api/auto', async (req) => ok(await A.autoInfo(await userOf(req))));
   post('/api/aquarium/visitors', (pid) => S.claimVisitors(pid), 10);
   app.get('/api/market', async () => ok({ items: await S.market() }));
-  post('/api/market/list', (pid, b) => S.listItem(pid, { kind: b.kind === 'line' ? 'line' : 'rod', item: String(b.item), price: Number(b.price) }), 10);
+  post('/api/market/list', (pid, b) => S.listItem(pid, { kind: b.kind === 'line' ? 'line' : b.kind === 'bait' ? 'bait' : 'rod', item: String(b.item), price: Number(b.price), qty: Number(b.qty) }), 10);
+  // ---------- tukar langsung antarpemain ----------
+  post('/api/trade', (pid) => T.board(pid), 60);   // POST: ikut kunci per pemain (mengambil kiriman = menulis tas)
+  app.get('/api/trade/inventory', async (req) => { const pid = await userOf(req); limit('inv' + pid, 40, 60); return ok(await T.inventory(String((req.query as { id?: string }).id ?? ''))); });
+  post('/api/trade/propose', async (pid, b) => { const r = await T.propose(pid, { to: String(b.to ?? ''), give: b.give, want: b.want, note: b.note }); notify(r.trade.to, { t: 'trade', kind: 'baru', name: r.trade.fromName }); return r; }, 10);
+  post('/api/trade/accept', async (pid, b) => { const r = await T.accept(pid, String(b.id)); notify(r.trade.from, { t: 'trade', kind: 'diterima', name: r.trade.toName }); return r; }, 20);
+  post('/api/trade/decline', async (pid, b) => { const r = await T.decline(pid, String(b.id)); notify(r.trade.from, { t: 'trade', kind: 'ditolak', name: r.trade.toName }); return r; }, 20);
+  post('/api/trade/cancel', (pid, b) => T.cancel(pid, String(b.id)), 20);
   post('/api/market/cancel', (pid, b) => S.cancelListing(pid, String(b.id)));
   post('/api/market/buy', (pid, b) => S.buyListing(pid, String(b.id)));
   app.get('/api/clubs', async (req) => ok(await S.clubs(await userOf(req))));
@@ -220,6 +233,8 @@ export function buildServer(opts: ServerOptions = {}) {
   const send = (c: Conn, m: ServerMsg) => { if (c.ws.readyState === WebSocket.OPEN) c.ws.send(JSON.stringify(m)); };
   function broadcast(room: string, m: ServerMsg, except?: Conn) { for (const c of rooms.get(room) ?? []) if (c !== except) send(c, m); }
   function broadcastAll(m: ServerMsg) { for (const r of rooms.keys()) broadcast(r, m); }
+  /** Kirim kabar ke satu pemain (di ruang mana pun) bila sedang daring. */
+  function notify(pid: string, m: ServerMsg) { for (const set of rooms.values()) for (const c of set) if (c.id === pid) send(c, m); }
 
   /** Pilih ruang: "B3" → "B3#1", "B3#2", … bila penuh. */
   function roomFor(base: string) {

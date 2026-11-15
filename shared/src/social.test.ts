@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Authority, MemoryStore, Social, TOURS, TOUR_PARTICIPATION, CLUB_TARGET_KG, CLUB_REWARD, MARKET_FEE, AQ_SIZE, weekKey, dayKey, type CatchRec } from './index';
+import { Authority, MemoryStore, Social, START_BAIT, TOURS, TOUR_PARTICIPATION, CLUB_TARGET_KG, CLUB_REWARD, MARKET_FEE, AQ_SIZE, weekKey, dayKey, type CatchRec } from './index';
 
 function setup() {
   let t = 1_790_000_000;
@@ -76,11 +76,25 @@ describe('pasar', () => {
     await expect(S.buyListing('a', listing.id)).rejects.toThrow(/sendiri/);
     const r = await S.buyListing('b', listing.id);
     expect(r.player.coins).toBe(200); expect(r.player.rods.includes('karbon')).toBe(true);
+    expect((await st.getPlayer('a'))!.coins).toBe(0); // belum diambil: pembeli tidak menulis data penjual
+    const got = await S.collectPaid('a'); expect(got.coins).toBe(Math.floor(300 * (1 - MARKET_FEE)));
     expect((await st.getPlayer('a'))!.coins).toBe(Math.floor(300 * (1 - MARKET_FEE)));
+    expect((await S.collectPaid('a')).coins).toBe(0); // tidak bisa diambil dua kali
     await expect(S.buyListing('b', listing.id)).rejects.toThrow(/terjual/);
     const b = (await st.getPlayer('b'))!; b.lines.push('pe'); await st.savePlayer(b);
     const l2 = await S.listItem('b', { kind: 'line', item: 'pe', price: 40 });
     await S.cancelListing('b', l2.listing.id); expect((await st.getPlayer('b'))!.lines.includes('pe')).toBe(true);
+  });
+  it('jual umpan per bungkus: stok umpan dipotong, pembeli dapat jumlahnya, hasil diambil lewat progres', async () => {
+    const { S, mk, st } = setup(); const a = await mk('a', 0); a.bait = { udang: 30, cacing: 5 }; await st.savePlayer(a); await mk('b', 100);
+    await expect(S.listItem('a', { kind: 'bait', item: 'cacing', qty: 6, price: 20 })).rejects.toThrow(/hanya 5/);
+    await expect(S.listItem('a', { kind: 'bait', item: 'udang', qty: 0, price: 20 })).rejects.toThrow(/1–/);
+    const { listing } = await S.listItem('a', { kind: 'bait', item: 'udang', qty: 20, price: 60 });
+    expect((await st.getPlayer('a'))!.bait.udang).toBe(10);
+    const r = await S.buyListing('b', listing.id); expect(r.player.bait.udang).toBe(START_BAIT + 20); expect(r.player.coins).toBe(40);
+    await S.progress('a'); expect((await st.getPlayer('a'))!.coins).toBe(Math.floor(60 * (1 - MARKET_FEE)));
+    const l2 = await S.listItem('a', { kind: 'bait', item: 'cacing', qty: 5, price: 10 }); await S.cancelListing('a', l2.listing.id);
+    expect((await st.getPlayer('a'))!.bait.cacing).toBe(5);
   });
   it('dua pembeli bersamaan: hanya satu yang dapat', async () => {
     const { S, mk, st } = setup(); const a = await mk('a'); a.rods.push('tegar'); await st.savePlayer(a); await mk('b'); await mk('c');

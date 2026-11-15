@@ -70,3 +70,30 @@ describe('server waktu nyata', () => {
     A.ws.close(); B.ws.close();
   });
 });
+
+describe('server tukar antarpemain', () => {
+  it('ajukan → kabar waktu nyata → terima → kiriman diambil; endpoint pasar umpan', async () => {
+    const { MemoryStore } = await import('@paunjunan/shared');
+    const store = new MemoryStore();
+    const { app: s2 } = buildServer({ store, now: () => clock });
+    await s2.listen({ port: 0, host: '127.0.0.1' }); const port = (s2.server.address() as { port: number }).port, b2 = 'http://127.0.0.1:' + port;
+    const c2 = async (path: string, token = '', body?: object) => { const r = await fetch(b2 + path, { method: body ? 'POST' : 'GET', headers: { 'content-type': 'application/json', 'x-auth-token': token }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, ...((await r.json()) as object) } as any; };
+    const a = await c2('/api/auth/guest', '', { name: 'Penjual' }), b = await c2('/api/auth/guest', '', { name: 'Pembeli' });
+    for (const [id, f] of [[a.player.id, (p: any) => { p.xp = 500; p.rods.push('karbon'); }], [b.player.id, (p: any) => { p.xp = 500; p.coins = 900; }]] as const) { const p = (await store.getPlayer(id))!; f(p); await store.savePlayer(p); }
+    const ws = new WebSocket(b2.replace('http', 'ws') + '/ws'); const msgs: any[] = [];
+    ws.on('message', d => msgs.push(JSON.parse(String(d))));
+    await new Promise(r => ws.on('open', r)); ws.send(JSON.stringify({ t: 'join', room: 'A1', token: b.token })); await new Promise(r => setTimeout(r, 150));
+    const inv = await c2('/api/trade/inventory?id=' + a.player.id, b.token); expect(inv.rods).toContain('karbon'); expect(inv.coins).toBeUndefined();
+    const pr = await c2('/api/trade/propose', a.token, { to: b.player.id, give: { rods: ['karbon'] }, want: { coins: 500 } });
+    expect(pr.ok).toBe(true); expect(pr.player.rods).not.toContain('karbon');
+    await new Promise(r => setTimeout(r, 150));
+    expect(msgs.find(m => m.t === 'trade')).toMatchObject({ kind: 'baru', name: 'Penjual' });
+    const bd = await c2('/api/trade', b.token, {}); expect(bd.incoming.length).toBe(1);
+    const ac = await c2('/api/trade/accept', b.token, { id: bd.incoming[0].id }); expect(ac.player.coins).toBe(400); expect(ac.player.rods).toContain('karbon');
+    const ad = await c2('/api/trade', a.token, {}); expect(ad.got.length).toBe(1); expect(ad.player.coins - a.player.coins).toBe(475);
+    // pasar umpan
+    const li = await c2('/api/market/list', a.token, { kind: 'bait', item: 'udang', qty: 5, price: 30 }); expect(li.ok).toBe(true); expect(li.listing.qty).toBe(5);
+    const bad = await c2('/api/trade/propose', a.token, { to: b.player.id, give: { coins: -1 }, want: {} }); expect(bad.ok).toBe(false);
+    ws.close(); await s2.close();
+  });
+});

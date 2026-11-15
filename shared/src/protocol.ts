@@ -21,6 +21,7 @@ export type ServerMsg =
   | { t: 'emote'; id: string; e: string }
   | { t: 'catch'; name: string; species: string; weight: number }   // pengumuman tangkapan besar
   | { t: 'pong'; at: number }
+  | { t: 'trade'; kind: 'baru' | 'diterima' | 'ditolak'; name: string }   // kabar penawaran tukar untuk pemain ini
   | { t: 'error'; msg: string };
 
 /** Pemain per ruang: HP hanya menggambar pemain di ruang yang sama. */

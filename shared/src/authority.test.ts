@@ -152,13 +152,13 @@ describe('keranjang besar', () => {
 });
 
 describe('lokasi', () => {
-  it('spot lokasi baru terkunci level; ikan laut punya tarikan & adu tarik minimal yang masuk akal', async () => {
+  it('semua lokasi terbuka sejak level 1 (saran level hanya label); ikan laut punya tarikan & adu tarik minimal yang masuk akal', async () => {
     const { MemoryStore, Authority, fightStrength, minFightSeconds, DEFAULT_SPOTS, SPECIES } = await import('./index');
     const st = new MemoryStore(); const A = new Authority({ store: st, rng: Math.random }); await A.ensureStock();
     const p = A.newPlayer('p', 'P'); await st.savePlayer(p);
-    await expect(A.cast('p', { spot: 'L1', zone: 'far', sub: 'jauh' })).rejects.toThrow(/level 15/);
-    const free = new Authority({ store: st, rng: Math.random, ignoreLevelLock: true });
-    const c = await free.cast('p', { spot: 'L1', zone: 'far', sub: 'jauh' }); expect(c.castId).toBeTruthy();
+    const c = await A.cast('p', { spot: 'L1', zone: 'far', sub: 'jauh' }); expect(c.castId).toBeTruthy(); // pemain Lv 1 boleh ke Laut Dalam
+    for (const s of DEFAULT_SPOTS) { expect(s.minLv).toBe(1); expect(s.recLv).toBeGreaterThanOrEqual(1); }
+    expect(DEFAULT_SPOTS.find(s => s.id === 'L1')!.recLv).toBe(15);
     expect(fightStrength('toman', 16, 1, 3)).toBeCloseTo(SPECIES.toman.str * 1.3 * 1.98 + 0.18, 3); // air tawar tidak berubah
     expect(fightStrength('marlin', 180, 1, 3)).toBeLessThan(10);
     expect(minFightSeconds(180)).toBeLessThan(70);

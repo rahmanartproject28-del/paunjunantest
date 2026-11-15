@@ -1,7 +1,7 @@
 // Layar Fase 3 & 4: Karakter, Turnamen, Akuarium, Pasar antarpemain, Klub, dan pusat "Sosial".
 import {
   COSMETICS, COS_TABS, AVATARS, DEFAULT_LOOK, lookCost, lookOf, cosItem, SPECIES, RODS, LINES, MARKET_FEE, MARKET_MIN,
-  COIN_PACKS, AQ_BIG_PRICE, aqVisitBonus, aqValue, CLUB_ICONS, CLUB_PRICE, itemName, type Look, type Player, type CatchRec, type RodId, type LineId,
+  COIN_PACKS, AQ_BIG_PRICE, BAITS, MARKET_MAX_BAIT, type BaitId, aqVisitBonus, aqValue, CLUB_ICONS, CLUB_PRICE, itemName, type Look, type Player, type CatchRec, type RodId, type LineId,
 } from '@paunjunan/shared';
 import type { Backend } from '../core/backend';
 import type { Angler } from '../actors/angler';
@@ -14,6 +14,8 @@ export interface SocialCtx {
   canEdit: () => boolean; showcase: (on: boolean) => void; confetti: () => void;
   /** tampilkan akuarium 3D (kamera ke tangki) — null bila tidak tersedia */
   aquarium3d?: (on: boolean, fish: CatchRec[]) => void;
+  /** buka layar tukar antarpemain */
+  openTrade?: () => void;
 }
 const fmtT = (s: number) => { const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h > 24 ? Math.floor(h / 24) + ' hari ' + (h % 24) + ' jam' : h + ' jam ' + m + ' mnt'; };
 const err = (e: unknown) => toast((e as Error).message, 3500);
@@ -127,14 +129,15 @@ export function createSocialUI(c: SocialCtx) {
     let html = '';
     if (tab === 'beli') {
       const others = items.filter(x => x.seller !== p.id);
-      html = '<div class="list">' + (others.length ? others.map(x => { const shopP = x.kind === 'rod' ? RODS[x.item as RodId]?.price : LINES[x.item as LineId]?.price;
-        return `<div class="item ${x.rare ? 'on' : ''}"><span class="icn">${x.kind === 'rod' ? '🎣' : '〰️'}</span><div><b>${esc(itemName(x.kind, x.item))}${x.rare ? ' · <span style="color:var(--gold2)">LANGKA</span>' : ''}</b><small>Penjual: ${esc(x.sellerName)}${shopP ? ' · harga toko ' + shopP : ''}</small></div><button class="btn gold" data-buy="${x.id}">${x.price}</button></div>`; }).join('') : '<p style="color:var(--dim)">Lapak masih kosong.</p>') + '</div>';
+      html = '<div class="list">' + (others.length ? others.map(x => { const shopP = x.kind === 'rod' ? RODS[x.item as RodId]?.price : x.kind === 'bait' ? Math.round((BAITS[x.item as BaitId]?.price ?? 0) / (BAITS[x.item as BaitId]?.pack ?? 1) * (x.qty ?? 1)) : LINES[x.item as LineId]?.price;
+        return `<div class="item ${x.rare ? 'on' : ''}"><span class="icn">${x.kind === 'rod' ? '🎣' : x.kind === 'bait' ? '🪱' : '〰️'}</span><div><b>${esc(itemName(x.kind, x.item))}${x.qty ? ' ×' + x.qty : ''}${x.rare ? ' · <span style="color:var(--gold2)">LANGKA</span>' : ''}</b><small>Penjual: ${esc(x.sellerName)}${shopP ? ' · harga toko ' + shopP : ''}</small></div><button class="btn gold" data-buy="${x.id}">${x.price}</button></div>`; }).join('') : '<p style="color:var(--dim)">Lapak masih kosong.</p>') + '</div>';
     } else {
       const mine = items.filter(x => x.seller === p.id);
-      const sellable = [...p.rods.filter(r => r !== 'pemula' && r !== p.curRod).map(r => ['rod', r] as const), ...p.lines.filter(l => l !== 'l20' && l !== p.curLine).map(l => ['line', l] as const)];
-      html = `<p style="color:var(--dim);font-size:12px">Biaya pasar ${Math.round(MARKET_FEE * 100)}% dipotong saat barang terjual. Barang tidak laku kembali setelah 3 hari (tarik sendiri).</p>
-        ${sellable.length ? `<div class="row"><select id="mkItem" class="sel">${sellable.map(([k, id]) => `<option value="${k}:${id}">${esc(itemName(k, id))}</option>`).join('')}</select><input id="mkPrice" class="sel" type="number" min="${MARKET_MIN}" placeholder="Harga" style="max-width:90px"><button class="btn gold" id="mkList" style="flex:0 0 auto">Pasang</button></div>` : '<p style="color:var(--dim)">Tidak ada barang yang bisa dijual (joran/senar yang sedang dipakai dan barang bawaan tidak bisa dijual).</p>'}
-        <p style="margin:10px 0 4px;font-weight:800">Lapak saya</p><div class="list">${mine.length ? mine.map(x => `<div class="item"><span class="icn">🏷️</span><div><b>${esc(itemName(x.kind, x.item))}</b><small>${x.price} koin</small></div><button class="btn" data-cancel="${x.id}">Tarik</button></div>`).join('') : '<p style="color:var(--dim);margin:0">Belum ada barang.</p>'}</div>`;
+      const sellable = [...p.rods.filter(r => r !== 'pemula' && r !== p.curRod).map(r => ['rod', r] as const), ...p.lines.filter(l => l !== 'l20' && l !== p.curLine).map(l => ['line', l] as const),
+        ...(Object.keys(BAITS) as BaitId[]).filter(k => (p.bait[k] ?? 0) > 0).map(k => ['bait', k] as const)];
+      html = `<p style="color:var(--dim);font-size:12px">Biaya pasar ${Math.round(MARKET_FEE * 100)}% dipotong saat barang terjual. Umpan dijual per bungkus (isi jumlahnya). Barang tidak laku kembali setelah 3 hari (tarik sendiri).</p>
+        ${sellable.length ? `<div class="row"><select id="mkItem" class="sel">${sellable.map(([k, id]) => `<option value="${k}:${id}">${esc(itemName(k, id))}${k === 'bait' ? ' (punya ' + (p.bait[id as BaitId] ?? 0) + ')' : ''}</option>`).join('')}</select><input id="mkQty" class="sel" type="number" min="1" max="${MARKET_MAX_BAIT}" placeholder="Jml" title="Jumlah umpan" style="max-width:64px" hidden><input id="mkPrice" class="sel" type="number" min="${MARKET_MIN}" placeholder="Harga" style="max-width:90px"><button class="btn gold" id="mkList" style="flex:0 0 auto">Pasang</button></div>` : '<p style="color:var(--dim)">Tidak ada barang yang bisa dijual (joran/senar yang sedang dipakai dan barang bawaan tidak bisa dijual).</p>'}
+        <p style="margin:10px 0 4px;font-weight:800">Lapak saya</p><div class="list">${mine.length ? mine.map(x => `<div class="item"><span class="icn">🏷️</span><div><b>${esc(itemName(x.kind, x.item))}${x.qty ? ' ×' + x.qty : ''}</b><small>${x.price} koin</small></div><button class="btn" data-cancel="${x.id}">Tarik</button></div>`).join('') : '<p style="color:var(--dim);margin:0">Belum ada barang.</p>'}</div>`;
     }
     openSheet('🤝 Pasar pemain · ' + p.coins.toLocaleString('id-ID') + ' koin', tabs + html, b => {
       b.querySelectorAll<HTMLElement>('[data-mt]').forEach(x => x.onclick = () => openMarket(x.dataset.mt as 'beli'));
@@ -142,8 +145,12 @@ export function createSocialUI(c: SocialCtx) {
       b.querySelectorAll<HTMLElement>('[data-cancel]').forEach(x => x.onclick = async () => { try { const r = await c.backend.cancelListing(x.dataset.cancel!); c.setPlayer(r.player); toast('Barang kembali ke tas.'); openMarket('jual'); } catch (e) { err(e); } });
       b.querySelector<HTMLElement>('#mkList')?.addEventListener('click', async () => {
         const [kind, item] = (b.querySelector('#mkItem') as HTMLSelectElement).value.split(':');
-        try { const r = await c.backend.listItem({ kind: kind as 'rod', item, price: Number((b.querySelector('#mkPrice') as HTMLInputElement).value) }); c.setPlayer(r.player); toast('Barang dipasang di lapak.'); openMarket('jual'); } catch (e) { err(e); }
+        try { const r = await c.backend.listItem({ kind: kind as 'rod', item, price: Number((b.querySelector('#mkPrice') as HTMLInputElement).value), qty: Number((b.querySelector('#mkQty') as HTMLInputElement).value) }); c.setPlayer(r.player); toast('Barang dipasang di lapak. Hasil penjualan masuk saat Anda membuka Tukar/Misi.'); openMarket('jual'); } catch (e) { err(e); }
       });
+      // umpan dijual per bungkus: tampilkan kolom jumlah
+      const sel = b.querySelector<HTMLSelectElement>('#mkItem'), qty = b.querySelector<HTMLInputElement>('#mkQty');
+      const sync = () => { if (sel && qty) { const isB = sel.value.startsWith('bait:'); qty.hidden = !isB; if (isB && !qty.value) qty.value = '10'; } };
+      sel?.addEventListener('change', sync); sync();
       b.querySelectorAll('input').forEach(i => { i.addEventListener('keydown', e => e.stopPropagation()); i.addEventListener('keyup', e => e.stopPropagation()); });
     });
   }
@@ -206,7 +213,8 @@ export function createSocialUI(c: SocialCtx) {
       ['👕', 'Karakter', 'Topi, baju, celana, kacamata, kulit', () => openCharacter()],
       ['🏆', 'Turnamen', 'Harian & Raja Nila mingguan', () => openTournaments()],
       ['🐠', 'Akuarium', 'Pajang ikan, dapat koin pengunjung', () => openAquarium()],
-      ['🤝', 'Pasar pemain', 'Jual beli joran & senar', () => openMarket()],
+      ['🤝', 'Pasar pemain', 'Jual beli joran, senar & umpan', () => openMarket()],
+      ...(c.openTrade ? [['🔁', 'Tukar antarpemain', 'Tukar umpan/joran, jual-beli langsung dengan koin', () => c.openTrade!()] as [string, string, string, () => void]] : []),
       ['🛡️', 'Klub', 'Target kg mingguan bersama', () => openClubs()],
       ['🪙', 'Beli koin', 'Paket koin + bonus', () => openCoins()],
     ];
