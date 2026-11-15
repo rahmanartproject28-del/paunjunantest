@@ -1,10 +1,10 @@
 // Benda buatan: dermaga kayu, keramba apung (jaring, drum biru, pelampung oranye), pondok, batu tepi.
 import * as THREE from 'three';
 import { jukung } from './life';
-import { IS_DANAU, LOC, PIER, BOAT, REEF, SUNGAI_BRIDGE_X, rivC, rivW, shoreZ, PADS, fbm, addObstacle, KERAMBA, groundH, lakeE, SPOT_PLACES, BRIDGES, bridgeH, HUTS, HUT, RAFT, GATE, LOKET, WARUNG, SKIOSK, DOCK, KERAMBA_DECK, shoreXZ } from './layout';
+import { IS_DANAU, LOC, PIER, BOAT, REEF, SUNGAI_BRIDGE_X, rivC, rivW, shoreZ, PADS, fbm, addObstacle, KERAMBA, groundH, lakeE, SPOT_PLACES, BRIDGES, bridgeH, HUTS, HUT, RAFT, GATE, LOKET, WARUNG, SKIOSK, NKIOSK, DOCK, KERAMBA_DECK, shoreXZ } from './layout';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-function woodTexture(w = 256, h = 64, base = [120, 88, 58]) {
+export function woodTexture(w = 256, h = 64, base = [120, 88, 58]) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   const g = c.getContext('2d')!;
   const img = g.createImageData(w, h);
@@ -27,7 +27,7 @@ function netTexture() {
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
 }
 
-function signTexture(title: string, sub: string) {
+export function signTexture(title: string, sub: string) {
   const c = document.createElement('canvas'); c.width = 512; c.height = 96;
   const g = c.getContext('2d')!;
   g.fillStyle = '#2b1d12'; g.fillRect(0, 0, 512, 96);
@@ -36,7 +36,7 @@ function signTexture(title: string, sub: string) {
   g.fillStyle = '#d9b36a'; g.font = 'bold 20px system-ui, sans-serif'; g.fillText(sub, 256, 80);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
-function stripeTexture() {
+export function stripeTexture() {
   const c = document.createElement('canvas'); c.width = 128; c.height = 32;
   const g = c.getContext('2d')!;
   for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#f2efe6' : '#1a8a6a'; g.fillRect(i * 16, 0, 16, 32); }
@@ -66,13 +66,14 @@ export class Props {
     } else if (LOC === 'sungai') this.buildSungai(rocks);
     else if (LOC === 'pantai') this.buildPantai(plankMat, darkWood, rocks);
     else if (LOC === 'laut') this.buildLaut();
-    if (LOC === 'serene') this.buildKiosk(plankMat, darkWood);
+    if (LOC === 'serene') this.buildKiosk(plankMat, darkWood, SKIOSK);
+    else if (NKIOSK) this.buildKiosk(plankMat, darkWood, NKIOSK);
   }
 
   /** Kios umpan kecil di lapangan Danau Serene: meja, rak umpan, tenda bergaris, papan nama, joran berdiri.
    *  Muka kios menghadap +X (jalan ke dermaga). Penjaga (NPC) ditempatkan main.ts di belakang meja. */
-  private buildKiosk(plank: THREE.Material, dark: THREE.Material) {
-    const K = SKIOSK, y = groundH(K.x, K.z);
+  private buildKiosk(plank: THREE.Material, dark: THREE.Material, K: { x: number; z: number }) {
+    const y = groundH(K.x, K.z);
     const W = new THREE.Group(); W.name = 'kiosk'; W.position.set(K.x, y, K.z); W.rotation.y = Math.PI / 2; // lokal +Z → dunia +X
     const roofMat = new THREE.MeshStandardMaterial({ color: 0x3b2a20, roughness: 0.8 });
     const back = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.3, 0.1), plank); back.position.set(0, 1.15, -0.9); back.castShadow = true;
@@ -251,7 +252,7 @@ export class Props {
     const postGeo = new THREE.CylinderGeometry(0.03, 0.035, 1, 5);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
     for (const br of BRIDGES) {
-      if (br.style === 'kayu') continue; // titian kayu Serene dibangun di serene.ts
+      if (br.style === 'kayu' || br.style === 'beton') continue; // titian kayu & pemecah ombak dibangun di serene.ts / newmaps.ts
       const dx = br.b.x - br.a.x, dz = br.b.z - br.a.z, len = Math.hypot(dx, dz), yaw = Math.atan2(dx, dz);
       const nP = Math.ceil(len / 0.34), nD = Math.ceil(len / 2.4), nPost = Math.ceil(len / 2.4) + 1;
       const planks = new THREE.InstancedMesh(plankGeo, bamboo, nP);

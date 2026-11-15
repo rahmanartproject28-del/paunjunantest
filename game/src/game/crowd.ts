@@ -140,7 +140,10 @@ export class Crowd {
 export function simulatedPlayers(): NetPlayer[] {
   if (!IS_DANAU) {
     // lokasi lain: satu pemancing di dekat tiap spot + satu yang berjalan
-    const names = LOC === 'serene' ? ['RakaFishing', 'SitiPancing', 'Bayu.Joran', 'Ardi.Mancing'] : ['Pak Darto', 'Nelayan.Ujang', 'SiKakap', 'Andi.Pancing'], looks = [{ hat: 'caping', shirtColor: 'krem', skin: 'gelap' }, { hat: 'kupluk', hatColor: 'oranye', shirtColor: 'biru' }, { hat: 'rimba', shirtColor: 'zaitun' }, { hat: 'pet', shirtColor: 'merah' }];
+    const names = LOC === 'serene' ? ['RakaFishing', 'SitiPancing', 'Bayu.Joran', 'Ardi.Mancing']
+      : LOC === 'kolam' ? ['Kang Dedi', 'Mas.Galatama', 'Teh.Euis', 'Asep.Babon'] : LOC === 'gambut' ? ['Julak Amat', 'Utuh.Klotok', 'Galuh.Mancing', 'Anang.Tapah']
+      : LOC === 'bakau' ? ['Bli Komang', 'Wayan.Kakap', 'Mbok.Ketut', 'Putu.Muara'] : LOC === 'laguna' ? ['Bung Yohan', 'Nona.Marsha', 'Kaka.Ferdi', 'Obet.GT']
+      : LOC === 'pelabuhan' ? ['Daeng Rudi', 'Koko.Layur', 'Bang.Ucok', 'Iwan.Bagan'] : ['Pak Darto', 'Nelayan.Ujang', 'SiKakap', 'Andi.Pancing'], looks = [{ hat: 'caping', shirtColor: 'krem', skin: 'gelap' }, { hat: 'kupluk', hatColor: 'oranye', shirtColor: 'biru' }, { hat: 'rimba', shirtColor: 'zaitun' }, { hat: 'pet', shirtColor: 'merah' }];
     const out: NetPlayer[] = [];
     SPOT_PLACES.forEach((sp, i) => {
       if (LOC === 'serene' && i === 0) return; // dermaga pemain tetap lapang seperti gambar konsep

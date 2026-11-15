@@ -8,6 +8,11 @@ export const MAP_BOUNDS = IS_DANAU ? { x0: -112, x1: 112, z0: -122, z1: 42 }
   : LOC === 'serene' ? { x0: -130, x1: 190, z0: -372, z1: 40 }
   : LOC === 'laut' ? { x0: -22, x1: 22, z0: -16, z1: 16 }
   : LOC === 'pantai' ? { x0: -150, x1: 150, z0: -95, z1: 55 }
+  : LOC === 'kolam' ? { x0: -80, x1: 80, z0: -55, z1: 30 }
+  : LOC === 'gambut' ? { x0: -110, x1: 110, z0: -90, z1: 40 }
+  : LOC === 'bakau' ? { x0: -90, x1: 90, z0: -70, z1: 50 }
+  : LOC === 'laguna' ? { x0: -70, x1: 70, z0: -50, z1: 50 }
+  : LOC === 'pelabuhan' ? { x0: -80, x1: 90, z0: -110, z1: 50 }
   : { x0: LAKE.cx - LAKE.rx * 0.75, x1: LAKE.cx + LAKE.rx * 0.75, z0: LAKE.cz - LAKE.rz * 0.9, z1: LAKE.cz + LAKE.rz * 0.9 };
 // piksel per meter gambar dasar: lokasi besar memakai resolusi lebih rendah supaya cepat dibuat
 const PPM = Math.min(1.5, (LOC === 'serene' ? 330 : 520) / Math.max(MAP_BOUNDS.x1 - MAP_BOUNDS.x0, MAP_BOUNDS.z1 - MAP_BOUNDS.z0));
@@ -43,8 +48,8 @@ export function mapBase() {
       const shade = Math.max(0.55, Math.min(1.25, 1 - (sx * 0.5 + sz * 0.7) * 0.6));
       const hh = Math.min(1, h / 30);
       r = (92 + 70 * hh) * shade; gg = (132 + 20 * hh) * shade; b = (70 + 40 * hh) * shade;
-      const sandE = LOC === 'pantai' ? 1.55 : LOC === 'laut' ? 1.25 : LOC === 'sungai' ? 1.06 : 1.03;
-      if (e < sandE && h < 3) { const k = LOC === 'pantai' || LOC === 'laut' ? 0.75 : 0.4; r = r * (1 - k) + 222 * k; gg = gg * (1 - k) + 200 * k; b = b * (1 - k) + 140 * k; } // pasir tepi
+      const sandE = LOC === 'laguna' ? 1.4 : LOC === 'pelabuhan' || LOC === 'kolam' ? 1.0 : LOC === 'pantai' ? 1.55 : LOC === 'laut' ? 1.25 : LOC === 'sungai' ? 1.06 : 1.03;
+      if (e < sandE && h < 3) { const k = LOC === 'pantai' || LOC === 'laut' || LOC === 'laguna' ? 0.75 : 0.4; r = r * (1 - k) + 222 * k; gg = gg * (1 - k) + 200 * k; b = b * (1 - k) + 140 * k; } // pasir tepi
     }
     const k = (j * W + i) * 4; img.data[k] = r; img.data[k + 1] = gg; img.data[k + 2] = b; img.data[k + 3] = 255;
   }
@@ -64,7 +69,7 @@ const ACT_COL: Record<string, string> = { sepi: '#8a96a4', sedang: '#ffd873', ra
 export function drawMap(g: CanvasRenderingContext2D, v: View, d: MapDyn, opts: { labels?: boolean; mini?: boolean } = {}) {
   const { x0, z0 } = MAP_BOUNDS;
   g.save();
-  g.fillStyle = LOC === 'laut' || LOC === 'pantai' ? '#1f5a80' : '#2b4a3a'; g.fillRect(0, 0, v.w, v.h);
+  g.fillStyle = LOC === 'laut' || LOC === 'pantai' || LOC === 'laguna' || LOC === 'pelabuhan' ? '#1f5a80' : '#2b4a3a'; g.fillRect(0, 0, v.w, v.h);
   const b = mapBase(), s = v.scale / PPM, o = toScreen(v, x0, z0);
   g.imageSmoothingEnabled = true;
   g.drawImage(b, o.x, o.y, b.width * s, b.height * s);

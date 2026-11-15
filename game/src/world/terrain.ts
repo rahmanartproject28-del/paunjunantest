@@ -1,6 +1,6 @@
 // Medan: tepian danau berumput, tanah lumpur di pinggir air, bukit dan pegunungan berkabut.
 import * as THREE from 'three';
-import { groundH, lakeE, LOC, IS_SERENE } from './layout';
+import { groundH, lakeE, LOC, IS_SERENE, MAPSTYLE } from './layout';
 import { Q } from '../core/quality';
 import { FAR } from './farcut';
 
@@ -31,7 +31,7 @@ export function buildTerrain(tex: { grass: THREE.Texture; dirt: THREE.Texture; d
     const e = lakeE(x, z);
     // 0 = rumput, 1 = tanah/lumpur
     // lebar pita tepi air: pasir lebar di pantai & pulau, kerikil di sungai, lumpur tipis di danau
-    const band = IS_SERENE ? 0.035 : LOC === 'pantai' ? 0.6 : LOC === 'laut' ? 0.25 : LOC === 'sungai' ? 0.12 : 0.03;
+    const band = MAPSTYLE ? MAPSTYLE.mudBand : IS_SERENE ? 0.035 : LOC === 'pantai' ? 0.6 : LOC === 'laut' ? 0.25 : LOC === 'sungai' ? 0.12 : 0.03;
     const mud = h > 4 ? 0 : 1 - Math.min(1, Math.max(0, (e - 1.0) / band));
     blend[i * 2] = mud;
     blend[i * 2 + 1] = Math.min(1, Math.max(0, (h - 12) / 30)); // lereng tinggi: lebih gelap/berbatu
@@ -41,9 +41,9 @@ export function buildTerrain(tex: { grass: THREE.Texture; dirt: THREE.Texture; d
 
   for (const t of [tex.grass, tex.dirt, tex.dirtN]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; }
   const mat = new THREE.MeshStandardMaterial({ map: tex.grass, roughness: 0.95, metalness: 0 });
-  const tint = IS_SERENE ? 'vec3(0.95, 0.9, 0.78)' : LOC === 'pantai' || LOC === 'laut' ? 'vec3(1.05, 0.93, 0.7)' : LOC === 'sungai' ? 'vec3(0.55, 0.52, 0.47)' : 'vec3(0.42, 0.37, 0.3)';
+  const tint = MAPSTYLE ? MAPSTYLE.tint : IS_SERENE ? 'vec3(0.95, 0.9, 0.78)' : LOC === 'pantai' || LOC === 'laut' ? 'vec3(1.05, 0.93, 0.7)' : LOC === 'sungai' ? 'vec3(0.55, 0.52, 0.47)' : 'vec3(0.42, 0.37, 0.3)';
   mat.onBeforeCompile = (sh) => {
-    sh.fragmentShader = '#define DIRT_TINT ' + tint + '\n' + (IS_SERENE ? '#define SERENE 1\n' : '') + sh.fragmentShader;
+    sh.fragmentShader = '#define DIRT_TINT ' + tint + '\n' + (IS_SERENE || MAPSTYLE?.clearBed ? '#define SERENE 1\n' : '') + sh.fragmentShader;
     sh.uniforms.tDirt = { value: tex.dirt }; sh.uniforms.uTime = terrainTime;
     sh.uniforms.tBed = bedU.tBed; sh.uniforms.uBedOn = bedU.uBedOn;
     sh.uniforms.uFarOn = FAR.on; sh.uniforms.uFarC = FAR.c; sh.uniforms.uFarR = FAR.r;

@@ -19,7 +19,7 @@ export class FlowFx {
   private s: Streak[] = [];
   private m4 = new THREE.Matrix4(); private q = new THREE.Quaternion(); private v = new THREE.Vector3(); private sc = new THREE.Vector3(); private col = new THREE.Color();
   constructor() {
-    if (LOC === 'danau' || LOC === 'serene') return;
+    if (LOC === 'danau' || LOC === 'serene' || LOC === 'kolam') return;
     const n = Math.round((LOC === 'sungai' ? 190 : LOC === 'pantai' ? 150 : 70) * Math.max(0.4, Q.trees));
     const geo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
     // aditif: warna per-instance 0 = tak terlihat (memudar), 1 = buih terang — tidak pernah jadi garis gelap

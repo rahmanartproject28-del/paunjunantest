@@ -125,7 +125,7 @@ export class Fishing {
     const near = SPOT_PLACES.find(sp => Math.hypot(sp.pos.x - x, sp.pos.z - z) < 1.5);
     const id = near?.id ?? spotAreaAt(x, z);
     const w = walkInfo(x, z);
-    const names: Record<string, string> = { dermaga: 'Dermaga', titian: 'Titian', keramba: 'Keramba', darat: LOC === 'pantai' ? 'Pantai' : LOC === 'sungai' ? 'Tepi sungai' : 'Tepi danau', papan: 'Tepi Rumput', batu: 'Batu Besar', kapal: 'Kapal' };
+    const names: Record<string, string> = { dermaga: 'Dermaga', titian: 'Titian', keramba: 'Keramba', darat: LOC === 'pantai' || LOC === 'laguna' ? 'Pantai' : LOC === 'kolam' ? 'Tepi kolam' : LOC === 'gambut' ? 'Tepi sungai' : LOC === 'bakau' ? 'Tepi muara' : LOC === 'pelabuhan' ? 'Tembok dermaga' : LOC === 'sungai' ? 'Tepi sungai' : 'Tepi danau', papan: 'Tepi Rumput', batu: 'Batu Besar', kapal: 'Kapal' };
     // posisi & arah persis seperti yang dipilih pemain; spot terdekat hanya dipakai untuk nama & stok ikan
     this.spot = { id, pos: V(x, 0, z), yaw, deck: w?.y ?? near?.deck ?? this.angler.root.position.y, label: near?.label ?? (names[w?.s ?? 'darat'] ?? 'Tepi') + ' · ' + id };
     this.seated = seated;
@@ -441,7 +441,7 @@ export class Fishing {
       const danger = (LOC !== 'laut' && lakeE(F.pos.x, F.pos.z) > 0.9) || inKeramba(F.pos.x, F.pos.z) || Math.random() < 0.08 * dt * 10;
       if (danger && Math.random() < dt * 0.9) {
         F.liftT = 1.9; F.liftCd = 9 + Math.random() * 6; $('liftBtn').hidden = false; buzz([30, 20, 30]);
-        caption(inKeramba(F.pos.x, F.pos.z) ? 'Ikan menuju jaring keramba!' : LOC === 'pantai' ? 'Ikan menuju karang!' : LOC === 'sungai' ? 'Ikan menuju bebatuan!' : LOC === 'laut' ? 'Ikan menyelam ke bawah kapal!' : LOC === 'serene' ? 'Ikan menuju bebatuan!' : 'Ikan menuju rumput!', 1400);
+        caption(inKeramba(F.pos.x, F.pos.z) ? 'Ikan menuju jaring keramba!' : LOC === 'pantai' ? 'Ikan menuju karang!' : LOC === 'sungai' ? 'Ikan menuju bebatuan!' : LOC === 'laut' ? 'Ikan menyelam ke bawah kapal!' : LOC === 'serene' ? 'Ikan menuju bebatuan!' : LOC === 'kolam' ? 'Ikan menuju kincir air!' : LOC === 'gambut' ? 'Ikan menuju kayu tenggelam!' : LOC === 'bakau' ? 'Ikan menuju akar bakau!' : LOC === 'laguna' ? 'Ikan menuju karang!' : LOC === 'pelabuhan' ? 'Ikan menuju tiang dermaga!' : 'Ikan menuju rumput!', 1400);
       }
     }
     if (this.autoOn) { if (F.autoEnd !== undefined && el >= F.autoEnd && !F.autoSent) this.autoLand(F); }

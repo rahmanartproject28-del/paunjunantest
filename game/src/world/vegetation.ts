@@ -3,7 +3,7 @@
 // supaya ribuan segitiga tidak membebani HP.
 import * as THREE from 'three';
 import { Tree } from 'ez-tree-src/index.js';
-import { groundH, lakeE, SPOT_PLACES, inKeramba, fbm, reserved, addObstacle, shoreXZ, LOC } from './layout';
+import { groundH, lakeE, SPOT_PLACES, inKeramba, fbm, reserved, addObstacle, shoreXZ, LOC, MAPSTYLE } from './layout';
 import { Q } from '../core/quality';
 
 type Variant = { branches: THREE.BufferGeometry; leaves: THREE.BufferGeometry; bMat: THREE.Material; lMat: THREE.Material; height: number; impostor: THREE.Texture; aspect: number; baseW: number };
@@ -112,13 +112,13 @@ export class Vegetation {
       }
       return;
     }
-    const n = Math.round(420 * Q.trees * (LOC === 'laut' ? 0.35 : LOC === 'pantai' ? 0.6 : LOC === 'sungai' ? 1.25 : 1));
+    const n = Math.round(420 * Q.trees * (MAPSTYLE ? MAPSTYLE.trees : LOC === 'laut' ? 0.35 : LOC === 'pantai' ? 0.6 : LOC === 'sungai' ? 1.25 : 1));
     let tries = 0;
     while (out.length < n && tries++ < n * 30) {
       const a = r() * Math.PI * 2, e = 1.04 + Math.pow(r(), 1.6) * 1.35;
       const { x, z } = shoreXZ(a, e * 1.02);
       const le = lakeE(x, z);
-      if (le < (LOC === 'pantai' ? 1.9 : LOC === 'laut' ? 1.25 : 1.05)) continue; // pantai: pohon di balik bukit pasir
+      if (le < (MAPSTYLE ? MAPSTYLE.shoreTreeE : LOC === 'pantai' ? 1.9 : LOC === 'laut' ? 1.25 : 1.05)) continue; // pantai: pohon di balik bukit pasir
       if (groundH(x, z) < 0.3) continue;
       if (fbm(x * 0.02, z * 0.02, 2) < 0.38 && le < 1.6) continue; // celah hutan
       // biarkan pandangan pemain terbuka: jangan menanam di depan/dekat spot
@@ -232,7 +232,7 @@ export class Vegetation {
     const reedMat = new THREE.MeshLambertMaterial({ color: 0x6f8a45 });
     const headGeo = new THREE.CylinderGeometry(0.035, 0.035, 0.22, 5).translate(0, 1.45, 0);
     const headMat = new THREE.MeshLambertMaterial({ color: 0x5a3a20 });
-    const N = LOC === 'laut' || LOC === 'pantai' ? 0 : Math.round(900 * Q.trees * (LOC === 'serene' ? 0.3 : 1)); // alang-alang: danau & sungai saja
+    const N = MAPSTYLE ? (MAPSTYLE.reeds ? Math.round(700 * Q.trees) : 0) : LOC === 'laut' || LOC === 'pantai' ? 0 : Math.round(900 * Q.trees * (LOC === 'serene' ? 0.3 : 1)); // alang-alang: danau & sungai saja
     const reeds = new THREE.InstancedMesh(reedGeo, reedMat, N), heads = new THREE.InstancedMesh(headGeo, headMat, Math.ceil(N / 3));
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), eu = new THREE.Euler();
     let k = 0, kh = 0, tries = 0;

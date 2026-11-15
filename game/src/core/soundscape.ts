@@ -14,6 +14,11 @@ const SCALES: Record<LocId, number[]> = {
   sungai: [293.7, 329.6, 349.2, 440.0, 493.9, 587.3, 659.3],  // D dorian — petualangan
   pantai: [349.2, 392.0, 440.0, 523.3, 587.3, 698.5, 784.0],  // F cerah
   laut: [220.0, 261.6, 293.7, 329.6, 392.0, 440.0, 523.3],    // A minor pentatonik — luas
+  kolam: [261.6, 293.7, 329.6, 392.0, 440.0, 523.3, 587.3],   // C pentatonik — santai kampung
+  gambut: [196.0, 233.1, 261.6, 293.7, 349.2, 392.0, 466.2],  // G minor — hutan rawa misterius
+  bakau: [233.1, 261.6, 293.7, 349.2, 392.0, 466.2, 523.3],   // Bb mayor pentatonik — senja hangat
+  laguna: [329.6, 370.0, 415.3, 493.9, 554.4, 659.3, 740.0],  // E mayor — cerah tropis
+  pelabuhan: [220.0, 246.9, 261.6, 329.6, 392.0, 440.0, 493.9], // A minor — malam kota
 };
 
 export class Soundscape {
@@ -64,20 +69,20 @@ export class Soundscape {
     if (!settings.sound) return;
     this.t += dt; const day = 1 - s.night;
     // lapisan menerus
-    setAmbient(this.loc === 'danau' || this.loc === 'serene' ? 0.12 : 0);
-    this.ramp(this.water, this.loc === 'sungai' ? 0.34 : this.loc === 'laut' ? 0.16 : this.loc === 'pantai' ? 0.05 : 0);
+    setAmbient(this.loc === 'danau' || this.loc === 'serene' || this.loc === 'kolam' || this.loc === 'gambut' ? 0.12 : 0);
+    this.ramp(this.water, this.loc === 'sungai' ? 0.34 : this.loc === 'laut' ? 0.16 : this.loc === 'pantai' || this.loc === 'laguna' ? 0.05 : this.loc === 'pelabuhan' ? 0.1 : this.loc === 'bakau' ? 0.04 : 0);
     this.ramp(this.wind, this.loc === 'laut' ? 0.1 + 0.06 * Math.sin(this.t * 0.21) + 0.04 * Math.sin(this.t * 0.53) : 0.02 + 0.015 * Math.sin(this.t * 0.17));
     this.ramp(this.rain, s.rain * 0.22);
     this.ramp(this.night, this.loc === 'laut' ? 0 : Math.max(0, s.night - 0.35) * 1.4 * (1 - s.rain * 0.7));
     this.musicBus.gain.setTargetAtTime(this.musicVol * 0.5 * (s.fighting ? 0.35 : 1) * (1 - s.night * 0.35), this.c!.AC.currentTime, 0.8);
     // kejadian sesekali
     if ((this.nextBird -= dt) < 0) {
-      const sea = this.loc === 'pantai' || this.loc === 'laut';
+      const sea = this.loc === 'pantai' || this.loc === 'laut' || this.loc === 'laguna' || this.loc === 'pelabuhan' || this.loc === 'bakau';
       this.nextBird = (sea ? 5 : 2.5) + Math.random() * (sea ? 9 : 6) + s.night * 10;
-      if (s.rain < 0.5) { if (sea && day > 0.3) this.gull(); else if (day > 0.4) { if (this.loc === 'sungai' && Math.random() < 0.35) this.forestCall(); else this.chirp(); } }
+      if (s.rain < 0.5) { if (sea && day > 0.3) this.gull(); else if (day > 0.4) { if ((this.loc === 'sungai' || this.loc === 'gambut') && Math.random() < 0.35) this.forestCall(); else this.chirp(); } }
     }
-    if (this.loc === 'pantai' && (this.nextWave -= dt) < 0) { this.nextWave = 5.5 + Math.random() * 4; this.wave(); }
-    if (this.loc === 'laut' && (this.nextSlap -= dt) < 0) { this.nextSlap = 1.8 + Math.random() * 3.5; this.slap(); }
+    if ((this.loc === 'pantai' || this.loc === 'laguna') && (this.nextWave -= dt) < 0) { this.nextWave = 5.5 + Math.random() * 4; this.wave(); }
+    if ((this.loc === 'laut' || this.loc === 'pelabuhan') && (this.nextSlap -= dt) < 0) { this.nextSlap = 1.8 + Math.random() * 3.5; this.slap(); }
     if ((this.loc === 'danau' || this.loc === 'serene' || this.loc === 'sungai') && s.night > 0.5 && (this.nextFrog -= dt) < 0) { this.nextFrog = 1.5 + Math.random() * 4; this.frog(); }
     if (this.musicVol > 0.01) {
       if ((this.nextNote -= dt) < 0) { this.nextNote = (1.1 + Math.random() * 2.2) * (1 + s.night * 0.8); this.note(); }

@@ -1,10 +1,10 @@
-# SERAH TERIMA — PAUNJUNAN v2 · versi 0.9.8
+# SERAH TERIMA — PAUNJUNAN v2 · versi 0.9.9
 
-> Diperbarui 15 November 2026 (v0.9.8). Untuk melanjutkan di akun Claude lain, lampirkan di percakapan baru:
+> Diperbarui 15 November 2026 (v0.9.9). Untuk melanjutkan di akun Claude lain, lampirkan di percakapan baru:
 > 1. **`PAUNJUNAN-LENGKAP-v0.9.7.zip`** — WAJIB. Isi: `1-game-dan-server/` (kode game + server + shared + aset game + alat uji offline), `2-website-ci4/` (website peringkat + panel pengelola, CodeIgniter 4.7), prototipe siap main, dokumen ini, `REKAP-FITUR-PAUNJUNAN.md`, `ASET-BACA-DULU.md`, `PANDUAN-GERAKAN-DAN-KENYAMANAN.md`.
 > 2. (hanya bila mau memasang aset/animasi tambahan) paket aset, dipecah 5 berkas supaya tiap berkas di bawah batas unggah 30 MB: `aset-1-animasi.zip`, `aset-2-ikan-air-efek-suara.zip`, `aset-3-langit.zip`, `aset-4-tanah.zip`, `aset-5-properti.zip`. `tools/make-motion.py` butuh `aset-1-animasi.zip` (folder `1-animasi-avatar/rpm-pria`; nama subfolder `idle/` dan `locomotion/` sama dengan aslinya).
 >
-> Lalu tulis: *"Lanjutkan proyek PAUNJUNAN v2 sesuai SERAH-TERIMA.md."* Bagian 0 (yang terbaru ada di akhir bagian itu: v0.9.7) dan bagian 7–8 berisi keadaan terakhir dan pekerjaan berikutnya.
+> Lalu tulis: *"Lanjutkan proyek PAUNJUNAN v2 sesuai SERAH-TERIMA.md."* Bagian 0 (yang terbaru ada di akhir bagian itu: v0.9.9) dan bagian 7–8 berisi keadaan terakhir dan pekerjaan berikutnya.
 > Prototipe terbit terakhir: artifact "PAUNJUNAN Mancing v0.9.5" (akun rahmanartproject28). Di akun lain tautan itu tidak bisa diperbarui — terbitkan artifact baru dari `game/dist-artifact/paunjunan.html` (cara di bagian 3).
 
 ---
@@ -124,6 +124,14 @@ Folder `2-website-ci4/` (repo terpisah di sandbox: `/home/claude/web/paunjunan-w
 - **Main lama (hemat baterai)** di Pengaturan: Otomatis (baterai < 20% & tidak diisi, Battery API) / Nyala / Mati → DPR ×0,85 + 20 FPS saat menunggu. Kotak FPS menampilkan Hz layar & status hemat.
 - **Play Protect / verifikasi developer**: sejak 30 Sep 2026 HP bersertifikat di Indonesia hanya memasang aplikasi dari developer terverifikasi; APK debug memakai kunci acak tiap build. Kunci unggah tetap dibuat (`paunjunan-upload.jks`, PKCS12, alias `paunjunan`, SHA-256 `0C:75:E3:4C:…:2A:E8`) dan diserahkan ke pemilik (TIDAK disimpan di repo). Workflow *Build Android*: bila 4 secret kunci ada → `assembleRelease` bertanda tangan (versionCode = nomor run), selain itu debug. Panduan B2 di RILIS-ANDROID.md (daftar verifikasi developer: akun distribusi terbatas gratis 20 HP, atau Play Console + internal testing).
 - Uji: +7 (`core/quality.test.ts`: irama 60/90/120 Hz, DynRes tenang). iOS (proyek Xcode, StoreKit + verifikasi JWS App Store di server, workflow TestFlight) ditunda sampai Android selesai.
+
+### v0.9.9 — Lima peta baru (variasi suasana memancing)
+- **Lokasi** (`shared/src/data.ts` LOCATIONS + DEFAULT_SPOTS, `LocId`): `kolam` Kolam Pemancingan (Lv 1, K1–K3), `bakau` Muara Bakau (Lv 5, M1–M3, senja tetap 17.3), `gambut` Sungai Gambut & Rumah Lanting (Lv 7, G1–G3), `pelabuhan` Pelabuhan Malam (Lv 10, H1–H3, malam tetap 20.6), `laguna` Laguna Karst ala Raja Ampat (Lv 13, R1–R3). Jam tetap hanya berlaku bila Pengaturan → Waktu dunia = "Jam HP"; pilihan Pagi/Siang/Sore/Malam tetap menang.
+- **Ikan baru (11)**: lele, bawal, tapah, lais, kakapputih, bandeng, belanak, kuwe (GT), kakatua, barakuda, layur — lengkap dengan warna tubuh, faktor umpan, harga. Website: `pj_helper.php` (nama & daftar) + `Admin/Game.php::SPOTS`.
+- **Bentuk dunia** (`world/layout.ts`): `IS_NEW`, `MAPSTYLE` (warna air, kejernihan, kabut, eksposur, jumlah kelapa/pohon/alang, tip sambutan), geometri per peta (PONDS/KYARD, gC/gW + LANTING/GJETTY, bkZ/creekX/BWALK, LISLE/KARST/LHOUSE/LLEDGE, QUAY_Z/BWATER/HPIER/BAGAN/LIGHTHOUSE), `newE/newGround/newLandOk/newReserved`, jembatan gaya `kayu`/`beton`/`apung`, PADS, warung per peta (NKIOSK: Mang Ujang, Acil Masnah, Pak Made, Mama Yosina, Koh Ahong).
+- **Bangunan & suasana** (`world/newmaps.ts`, `NewMapScape`, semua prosedural + InstancedMesh, tanpa berkas model): tepi kolam beton, saung ijuk, payung, kincir aerator berputar, lampu tali warna-warni, sawah; rumah lanting (rakit kayu, dinding bercat, atap seng, jendela menyala malam), klotok berlayar menyusuri sungai, eceng gondok, kabut rendah; pohon bakau berakar tunjang (3 varian), akar napas, jembatan papan berpagar, panggung pandang, gazebo, nipah; pulau karst jamur (Lambert, bukan Standard — pantulan langit membuatnya putih pucat), pondok apung, kano, karang warna-warni di dasar; tembok dermaga + bolder + ban, lampu jalan, dermaga beton bertiang pancang, kapal nelayan berlampu, pemecah ombak + tetrapod, mercusuar dengan sorot berputar, bagan + cahaya di air, kota berjendela menyala, gudang, derek.
+- Suara (`soundscape.ts`), peta mini (`ui/map.ts` MAP_BOUNDS), nama NPC (`crowd.ts`), label tepi & teks adu tarik (`fishing.ts`) mengikuti peta. Buka langsung: `?loc=kolam|gambut|bakau|laguna|pelabuhan`.
+- Saran aset tambahan (CC0, belum dipasang): Poly Haven (tekstur batu kapur/beton/kayu, HDRI senja), Kenney Watercraft Kit (perahu), OpenGameArt modular wooden docks, Quaternius (tumbuhan & properti).
 
 ## 1. Keputusan yang sudah disepakati
 

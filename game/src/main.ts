@@ -38,7 +38,7 @@ import { FishingLine } from './actors/tackle';
 import { FishActor } from './actors/fish';
 import { $, toast, openSheet, closeSheet, esc, fmtKg, fmtNum, sheetOpen, confetti } from './ui/hud';
 import { createHud, avatarFallback } from './ui/hudv2';
-import { IS_SERENE } from './world/layout';
+import { IS_SERENE, MAPSTYLE } from './world/layout';
 
 const qs = new URLSearchParams(location.search);
 window.addEventListener('error', e => showErr(e.error?.stack || e.message));
@@ -81,6 +81,7 @@ function worldHour() {
   if (qs.has('h')) return Number(qs.get('h'));
   const m = timePref();
   if (m === 'pagi') return 8.2; if (m === 'siang') return 12.3; if (m === 'sore') return 16.4; if (m === 'malam') return 20.5;
+  if (MAPSTYLE?.hour != null) return MAPSTYLE.hour; // peta bersuasana tetap (senja muara, malam pelabuhan) saat memakai jam HP
   const d = new Date(); return d.getHours() + d.getMinutes() / 60;
 }
 function autoWeather(): WeatherId {
@@ -602,7 +603,7 @@ let net: Net | null = null;
     openSheet(L.icon + ' ' + L.name, `<p style="color:var(--dim);margin:2px 0 10px">${esc(L.desc)}</p><div class="list">` +
       SPOT_PLACES.map(sp => `<div class="item"><span class="icn">📍</span><div><b>${esc(sp.label)}</b><small class="act-${activity[sp.id] ?? 'sedang'}">Aktivitas: ${activity[sp.id] ?? '—'}</small></div><button class="btn gold" data-sp="${sp.id}">Mancing</button></div>`).join('') +
       `</div><div class="row" style="margin-top:10px"><button class="btn" id="lwWalk">🚶 Jelajah</button><button class="btn ghost" id="lwLoc">🌏 Lokasi lain</button></div>
-      <p style="color:var(--dim);font-size:11px;margin-top:8px">${LOC === 'laut' ? 'Tip: tuna & marlin sangat kuat. Pakai Joran Laut Dalam, senar PE12/PE20, dan umpan cumi dari Warung.' : LOC === 'pantai' ? 'Tip: umpan cumi atau ikan kecil untuk kakap & kerapu. Joran Pantai Surf melempar lebih jauh.' : 'Tip: arus deras. Belida & semah suka umpan ikan kecil.'}</p>`, body => {
+      <p style="color:var(--dim);font-size:11px;margin-top:8px">${MAPSTYLE ? esc(MAPSTYLE.tip) : LOC === 'laut' ? 'Tip: tuna & marlin sangat kuat. Pakai Joran Laut Dalam, senar PE12/PE20, dan umpan cumi dari Warung.' : LOC === 'pantai' ? 'Tip: umpan cumi atau ikan kecil untuk kakap & kerapu. Joran Pantai Surf melempar lebih jauh.' : 'Tip: arus deras. Belida & semah suka umpan ikan kecil.'}</p>`, body => {
       body.querySelectorAll<HTMLElement>('[data-sp]').forEach(b => b.onclick = () => { teleport(b.dataset.sp!); });
       body.querySelector<HTMLElement>('#lwWalk')!.onclick = () => { closeSheet(); standUp(); };
       body.querySelector<HTMLElement>('#lwLoc')!.onclick = () => openLocations();

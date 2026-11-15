@@ -1,7 +1,7 @@
 // Air danau: pantulan cermin (resolusi rendah), dua lapis riak, kilau matahari,
 // air dangkal jernih di tepi, dan riak lingkaran dari cipratan / pelampung / hujan.
 import * as THREE from 'three';
-import { groundH, LAKE, WATER_Y, LOC, FLOW, IS_SERENE } from './layout';
+import { groundH, LAKE, WATER_Y, LOC, FLOW, IS_SERENE, MAPSTYLE } from './layout';
 import { Q } from '../core/quality';
 import { FAR } from './farcut';
 // objek bantu pantulan yang dipakai ulang tiap gambar (mengurangi sampah memori → mengurangi patah-patah)
@@ -40,12 +40,12 @@ export class Water extends THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>
         tReflect: { value: null }, tNormal: { value: normals }, tDepth: { value: depthTex },
         texMatrix: { value: new THREE.Matrix4() }, time: { value: 0 }, useRefl: { value: 0 },
         sunDir: { value: new THREE.Vector3(0.3, 0.8, -0.5) }, sunColor: { value: new THREE.Color(1, 0.95, 0.85) },
-        deepColor: { value: new THREE.Color(IS_SERENE ? 0x0a5876 : LOC === 'laut' ? 0x06244a : LOC === 'pantai' ? 0x0b4a6a : LOC === 'sungai' ? 0x2a3a2a : 0x0e2a24) },
-        shallowColor: { value: new THREE.Color(IS_SERENE ? 0x3cc9c0 : LOC === 'laut' ? 0x1a5a8a : LOC === 'pantai' ? 0x3fb4b0 : LOC === 'sungai' ? 0x6a6a4a : 0x3f6b4c) },
-        flow: { value: new THREE.Vector2(FLOW.x, FLOW.z) }, waveK: { value: LOC === 'laut' ? 2.2 : LOC === 'pantai' ? 1.6 : LOC === 'sungai' ? 1.4 : 1 },
+        deepColor: { value: new THREE.Color(MAPSTYLE ? MAPSTYLE.deep : IS_SERENE ? 0x0a5876 : LOC === 'laut' ? 0x06244a : LOC === 'pantai' ? 0x0b4a6a : LOC === 'sungai' ? 0x2a3a2a : 0x0e2a24) },
+        shallowColor: { value: new THREE.Color(MAPSTYLE ? MAPSTYLE.shallow : IS_SERENE ? 0x3cc9c0 : LOC === 'laut' ? 0x1a5a8a : LOC === 'pantai' ? 0x3fb4b0 : LOC === 'sungai' ? 0x6a6a4a : 0x3f6b4c) },
+        flow: { value: new THREE.Vector2(FLOW.x, FLOW.z) }, waveK: { value: MAPSTYLE ? MAPSTYLE.waveK : LOC === 'laut' ? 2.2 : LOC === 'pantai' ? 1.6 : LOC === 'sungai' ? 1.4 : 1 },
         skyTop: { value: new THREE.Color(0x4a7fc0) }, skyHor: { value: new THREE.Color(0xbfd4e0) },
         bounds: { value: new THREE.Vector4(LAKE.cx - W / 2, LAKE.cz - D / 2, W, D) },
-        wind: { value: 1 }, rain: { value: 0 }, farOn: FAR.on, farC: FAR.c, farR: FAR.r, clarity: { value: IS_SERENE ? 1 : 0 }, bright: { value: 1 }, fishPos: { value: new THREE.Vector3(0, -99, 0) },
+        wind: { value: 1 }, rain: { value: 0 }, farOn: FAR.on, farC: FAR.c, farR: FAR.r, clarity: { value: MAPSTYLE ? MAPSTYLE.clarity : IS_SERENE ? 1 : 0 }, bright: { value: 1 }, fishPos: { value: new THREE.Vector3(0, -99, 0) },
         ripples: { value: Array.from({ length: MAX_RIPPLES }, () => new THREE.Vector4(0, 0, -1, 0)) },
       }]),
       vertexShader: /* glsl */`

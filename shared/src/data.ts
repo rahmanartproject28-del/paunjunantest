@@ -4,8 +4,13 @@
 export type SpeciesId = 'nila' | 'mujair' | 'mas' | 'patin' | 'gabus' | 'baung' | 'toman'
   | 'belida' | 'jelawat' | 'semah'          // Sungai Deras
   | 'kakap' | 'kerapu' | 'baronang'         // Pantai Karang
-  | 'tongkol' | 'tuna' | 'marlin';          // Laut Dalam
-export type LocId = 'serene' | 'danau' | 'sungai' | 'pantai' | 'laut';
+  | 'tongkol' | 'tuna' | 'marlin'           // Laut Dalam
+  | 'lele' | 'bawal'                        // Kolam Pemancingan
+  | 'tapah' | 'lais'                        // Sungai Gambut
+  | 'kakapputih' | 'bandeng' | 'belanak'    // Muara Bakau
+  | 'kuwe' | 'kakatua' | 'barakuda'         // Laguna Karst
+  | 'layur';                                // Pelabuhan Malam
+export type LocId = 'serene' | 'danau' | 'sungai' | 'pantai' | 'laut' | 'kolam' | 'gambut' | 'bakau' | 'laguna' | 'pelabuhan';
 export type Zone = 'near' | 'far';
 export type SubZone = 'dermaga' | 'dekat' | 'jauh' | 'keramba' | 'lepas';
 export type WeatherId = 'cerah' | 'kabut' | 'hujan';
@@ -44,6 +49,22 @@ export const SPECIES: Record<SpeciesId, Species> = {
   tongkol:  { name: 'Tongkol',      zones: ['far'],         w: [1.0, 8],   str: 1.8,  pricePerKg: 24, lenK: 34, look: { back: '#1f3558', side: '#8aa0b8', belly: '#eef2f5', fin: '#2a3f60', stretch: 1.2, height: 0.9 } },
   tuna:     { name: 'Tuna Sirip Kuning', zones: ['far'],    w: [10, 80],   str: 2.1,  pricePerKg: 40, lenK: 36, look: { back: '#142a4a', side: '#8a9ab0', belly: '#f2f4f6', fin: '#e8c22a', stretch: 1.2, height: 0.95 } },
   marlin:   { name: 'Marlin Biru',  zones: ['far'],         w: [40, 180],  str: 2.3,  pricePerKg: 32, lenK: 38, look: { back: '#10254a', side: '#4a6a9a', belly: '#e8eef4', fin: '#1a3a6a', stretch: 1.7, height: 0.8 } },
+  // Kolam Pemancingan (kolam harian & galatama)
+  lele:     { name: 'Lele',         zones: ['near'],        w: [0.2, 2.5], str: 1.0,  pricePerKg: 14, lenK: 35, look: { back: '#2a2622', side: '#4a443c', belly: '#b8b0a0', fin: '#2e2a25', stretch: 1.45, height: 0.62 } },
+  bawal:    { name: 'Bawal',        zones: ['near', 'far'], w: [0.4, 4],   str: 1.25, pricePerKg: 22, lenK: 24, look: { back: '#3d4246', side: '#9aa3a8', belly: '#d8463a', fin: '#c0392b', stretch: 0.85, height: 1.5 } },
+  // Sungai Gambut (air hitam Kalimantan)
+  tapah:    { name: 'Tapah',        zones: ['far'],         w: [2, 30],    str: 2.0,  pricePerKg: 35, lenK: 40, look: { back: '#2a2a26', side: '#5a5850', belly: '#d8d4c8', fin: '#3a3830', stretch: 1.7, height: 0.7 } },
+  lais:     { name: 'Lais',         zones: ['near', 'far'], w: [0.1, 1.2], str: 0.8,  pricePerKg: 40, lenK: 36, look: { back: '#8a8a7a', side: '#c8c8b8', belly: '#eeeee4', fin: '#a8a898', stretch: 1.6, height: 0.6 } },
+  // Muara Bakau (air payau)
+  kakapputih: { name: 'Kakap Putih', zones: ['near', 'far'], w: [1, 25],  str: 1.85, pricePerKg: 50, lenK: 33, look: { back: '#5a6058', side: '#c0c8c4', belly: '#f0f2ee', fin: '#7a8078', stretch: 1.15, height: 1.0 } },
+  bandeng:  { name: 'Bandeng',      zones: ['near', 'far'], w: [0.3, 4],   str: 1.4,  pricePerKg: 20, lenK: 33, look: { back: '#3a5a6a', side: '#c8d4da', belly: '#f2f4f6', fin: '#8aa0aa', stretch: 1.3, height: 0.8 } },
+  belanak:  { name: 'Belanak',      zones: ['near'],        w: [0.2, 2],   str: 0.9,  pricePerKg: 16, lenK: 32, look: { back: '#4a5a5a', side: '#a8b4b0', belly: '#e8ecea', fin: '#7a8684', stretch: 1.2, height: 0.8 } },
+  // Laguna Karst (Raja Ampat)
+  kuwe:     { name: 'Kuwe Rambe (GT)', zones: ['far'],      w: [2, 45],    str: 2.15, pricePerKg: 38, lenK: 32, look: { back: '#2a2e34', side: '#7a8088', belly: '#d8dce0', fin: '#3a3e44', stretch: 1.0, height: 1.3 } },
+  kakatua:  { name: 'Kakatua',      zones: ['near'],        w: [0.5, 6],   str: 1.2,  pricePerKg: 26, lenK: 30, look: { back: '#1f6f6a', side: '#3fb8a0', belly: '#a8e0c8', fin: '#e05a8a', stretch: 1.1, height: 1.15 } },
+  barakuda: { name: 'Barakuda',     zones: ['far'],         w: [1, 18],    str: 1.75, pricePerKg: 30, lenK: 40, look: { back: '#3a4a52', side: '#a8b8c0', belly: '#eef2f4', fin: '#5a6a72', stretch: 1.9, height: 0.55 } },
+  // Pelabuhan Malam
+  layur:    { name: 'Layur',        zones: ['far'],         w: [0.3, 4],   str: 1.1,  pricePerKg: 26, lenK: 62, look: { back: '#9aa4ac', side: '#d8e0e6', belly: '#f4f8fa', fin: '#c8d0d6', stretch: 2.8, height: 0.38 } },
 };
 export const SPECIES_IDS = Object.keys(SPECIES) as SpeciesId[];
 
@@ -65,13 +86,13 @@ export const WEATHER: Record<WeatherId, Weather> = {
 
 export interface Bait { name: string; desc: string; price: number; pack: number; color: string; all?: boolean; mul: Partial<Record<SpeciesId, number>> }
 export const BAITS: Record<BaitId, Bait> = {
-  udang:  { name: 'Udang', desc: 'Umpan serba bisa, disukai hampir semua ikan.', price: 40, pack: 10, color: '#d9754a', mul: { nila: 1.2, mujair: 1.0, mas: 1.0, patin: 1.1, gabus: 0.8, baung: 1.2, toman: 0.6 } },
-  cacing: { name: 'Cacing', desc: 'Aroma tanah yang kuat, favorit mujair dan ikan mas.', price: 30, pack: 15, color: '#b0605c', mul: { nila: 1.0, mujair: 1.3, mas: 1.25, patin: 0.9, gabus: 0.9, baung: 1.35, toman: 0.4 } },
-  pelet:  { name: 'Pelet', desc: 'Seperti pakan di keramba. Nila dan ikan mas sangat suka.', price: 25, pack: 20, color: '#8a6a3a', mul: { nila: 1.45, mujair: 1.1, mas: 1.3, patin: 1.2, gabus: 0.2, baung: 0.9, toman: 0.1 } },
-  lumut:  { name: 'Lumut', desc: 'Umpan alami untuk ikan pemakan tumbuhan.', price: 35, pack: 12, color: '#4f7a3a', mul: { nila: 1.1, mujair: 1.45, mas: 1.4, patin: 0.3, gabus: 0.1, baung: 0.3, toman: 0.05 } },
+  udang:  { name: 'Udang', desc: 'Umpan serba bisa, disukai hampir semua ikan.', price: 40, pack: 10, color: '#d9754a', mul: { nila: 1.2, mujair: 1.0, mas: 1.0, patin: 1.1, gabus: 0.8, baung: 1.2, toman: 0.6, kakapputih: 1.5, lais: 1.3, belanak: 1.1, bawal: 1.2, bandeng: 0.8, layur: 1.2 } },
+  cacing: { name: 'Cacing', desc: 'Aroma tanah yang kuat, favorit mujair, ikan mas, dan lele.', price: 30, pack: 15, color: '#b0605c', mul: { nila: 1.0, mujair: 1.3, mas: 1.25, patin: 0.9, gabus: 0.9, baung: 1.35, toman: 0.4, lele: 1.5, lais: 1.4, belanak: 1.2, tapah: 0.8 } },
+  pelet:  { name: 'Pelet', desc: 'Seperti pakan di keramba & kolam. Nila, ikan mas, lele, bawal sangat suka.', price: 25, pack: 20, color: '#8a6a3a', mul: { nila: 1.45, mujair: 1.1, mas: 1.3, patin: 1.2, gabus: 0.2, baung: 0.9, toman: 0.1, lele: 1.5, bawal: 1.6, bandeng: 1.3, tapah: 0.3, kakapputih: 0.3 } },
+  lumut:  { name: 'Lumut', desc: 'Umpan alami untuk ikan pemakan tumbuhan (bandeng, belanak, kakatua).', price: 35, pack: 12, color: '#4f7a3a', mul: { nila: 1.1, mujair: 1.45, mas: 1.4, patin: 0.3, gabus: 0.1, baung: 0.3, toman: 0.05, bandeng: 1.6, belanak: 1.5, kakatua: 1.5, bawal: 0.6, lele: 0.2 } },
   racik:  { name: 'Umpan Racik Serba Ikan', desc: 'Dimakan semua jenis ikan, dari nila sampai toman.', price: 70, pack: 10, color: '#c9853a', all: true, mul: {} },
-  anakan: { name: 'Ikan kecil', desc: 'Umpan hidup untuk ikan predator seperti toman, gabus, dan patin.', price: 80, pack: 6, color: '#9aa6ad', mul: { nila: 0.3, mujair: 0.2, mas: 0.3, patin: 1.35, gabus: 2.3, baung: 1.1, toman: 2.8, belida: 1.8, semah: 1.4, kakap: 1.5, kerapu: 1.6, tongkol: 1.4, tuna: 1.3, marlin: 1.2, jelawat: 0.4, baronang: 0.3 } },
-  cumi:   { name: 'Cumi segar', desc: 'Umpan laut: kakap, kerapu, tongkol, tuna, dan marlin sangat suka.', price: 120, pack: 8, color: '#e8d8d0', mul: { kakap: 1.7, kerapu: 1.8, baronang: 0.6, tongkol: 1.6, tuna: 1.9, marlin: 2.1, nila: 0.2, mujair: 0.2, mas: 0.2, patin: 0.6, gabus: 0.5, baung: 0.8, toman: 0.7, belida: 0.9, jelawat: 0.3, semah: 0.6 } },
+  anakan: { name: 'Ikan kecil', desc: 'Umpan hidup untuk ikan predator seperti toman, gabus, dan patin.', price: 80, pack: 6, color: '#9aa6ad', mul: { nila: 0.3, mujair: 0.2, mas: 0.3, patin: 1.35, gabus: 2.3, baung: 1.1, toman: 2.8, belida: 1.8, semah: 1.4, kakap: 1.5, kerapu: 1.6, tongkol: 1.4, tuna: 1.3, marlin: 1.2, jelawat: 0.4, baronang: 0.3, tapah: 2.0, kuwe: 1.8, barakuda: 2.2, kakapputih: 2.2, layur: 1.6, lele: 0.8, bawal: 0.5, bandeng: 0.2, belanak: 0.3, kakatua: 0.3, lais: 0.9 } },
+  cumi:   { name: 'Cumi segar', desc: 'Umpan laut: kakap, kerapu, tongkol, tuna, dan marlin sangat suka.', price: 120, pack: 8, color: '#e8d8d0', mul: { kakap: 1.7, kerapu: 1.8, baronang: 0.6, tongkol: 1.6, tuna: 1.9, marlin: 2.1, nila: 0.2, mujair: 0.2, mas: 0.2, patin: 0.6, gabus: 0.5, baung: 0.8, toman: 0.7, belida: 0.9, jelawat: 0.3, semah: 0.6, layur: 1.8, barakuda: 1.5, kuwe: 1.6, kakapputih: 1.4, kakatua: 0.5, bandeng: 0.3, belanak: 0.4 } },
 };
 
 export interface Rod { name: string; desc: string; price: number; cast: number; power: number; color: string; shop?: boolean }
@@ -106,6 +127,11 @@ export const LOCATIONS: LocInfo[] = [
   { id: 'sungai', name: 'Sungai Deras', desc: 'Arus kuat di antara batu dan hutan. Belida, semah, jelawat, baung.', icon: '🌊', minLv: 5, start: 'S1' },
   { id: 'pantai', name: 'Pantai Karang', desc: 'Mancing dari karang, pantai, dan dermaga nelayan. Kakap, kerapu, baronang.', icon: '🏝️', minLv: 10, start: 'P3' },
   { id: 'laut', name: 'Laut Dalam', desc: 'Naik kapal ke tengah laut. Tongkol, tuna, dan marlin raksasa.', icon: '🚤', minLv: 15, start: 'L1' },
+  { id: 'kolam', name: 'Kolam Pemancingan', desc: 'Kolam harian & galatama ala kampung: saung bambu, sawah, kelapa, lampu malam. Lele, bawal, mas, patin.', icon: '🛖', minLv: 1, start: 'K1' },
+  { id: 'bakau', name: 'Muara Bakau', desc: 'Hutan mangrove & jembatan papan di muara, senja keemasan. Kakap putih, bandeng, belanak, kakap merah.', icon: '🌅', minLv: 5, start: 'M1' },
+  { id: 'gambut', name: 'Sungai Gambut', desc: 'Sungai air hitam Kalimantan: rumah lanting, perahu klotok, hutan rawa berkabut. Tapah, lais, jelawat, toman.', icon: '🛶', minLv: 7, start: 'G1' },
+  { id: 'pelabuhan', name: 'Pelabuhan Malam', desc: 'Pemecah ombak & dermaga beton, mercusuar, bagan berlampu. Layur, barakuda, tongkol, kakap.', icon: '⚓', minLv: 10, start: 'H1' },
+  { id: 'laguna', name: 'Laguna Karst', desc: 'Laguna toska di antara pulau batu kapur ala Raja Ampat, pondok apung. Kuwe rambe (GT), kakatua, barakuda, kerapu.', icon: '🏝️', minLv: 13, start: 'R1' },
 ];
 export const DEFAULT_SPOTS: SpotDef[] = [
   { id: 'D1', name: 'Dermaga Serene D1', desc: 'Ujung dermaga kayu, air jernih dan tenang', depth: '2–4 m', loc: 'serene', minLv: 1, stock: { nila: 22, mujair: 14, mas: 8, patin: 3, gabus: 4, baung: 3, toman: 1 } },
@@ -123,6 +149,21 @@ export const DEFAULT_SPOTS: SpotDef[] = [
   { id: 'L1', name: 'Haluan Kapal L1', desc: 'Depan kapal, menghadap laut lepas', depth: '40–60 m', loc: 'laut', minLv: 15, stock: { tongkol: 20, tuna: 6, marlin: 2, kakap: 4 } },
   { id: 'L2', name: 'Buritan Kapal L2', desc: 'Belakang kapal, tempat umpan diseret', depth: '40–60 m', loc: 'laut', minLv: 15, stock: { tongkol: 16, tuna: 8, marlin: 3 } },
   { id: 'L3', name: 'Lambung Kiri L3', desc: 'Sisi kapal, dekat rumpon', depth: '40–60 m', loc: 'laut', minLv: 15, stock: { tongkol: 18, tuna: 5, kerapu: 3, kakap: 4 } },
+  { id: 'K1', name: 'Saung Galatama K1', desc: 'Saung bambu di tepi kolam galatama, ikan besar dilepas tiap pagi', depth: '1,5–2,5 m', loc: 'kolam', minLv: 1, stock: { mas: 14, bawal: 12, patin: 10, lele: 8, nila: 6 } },
+  { id: 'K2', name: 'Kolam Harian K2', desc: 'Kolam harian ramai, ikan banyak tapi lebih kecil', depth: '1–1,5 m', loc: 'kolam', minLv: 1, stock: { lele: 22, nila: 18, bawal: 8, mas: 6, mujair: 8 } },
+  { id: 'K3', name: 'Kolam Babon K3', desc: 'Kolam indukan: sedikit ikan, tapi babon berbobot besar', depth: '2–3 m', loc: 'kolam', minLv: 1, stock: { patin: 8, mas: 8, bawal: 6, lele: 4 } },
+  { id: 'M1', name: 'Ujung Jembatan Papan M1', desc: 'Ujung titian kayu di tengah mangrove, menghadap muara', depth: '2–4 m', loc: 'bakau', minLv: 5, stock: { kakapputih: 8, bandeng: 10, belanak: 14, kakap: 4 } },
+  { id: 'M2', name: 'Gazebo Bakau M2', desc: 'Gazebo di tikungan sungai kecil, arus pasang-surut membawa umpan', depth: '1–3 m', loc: 'bakau', minLv: 5, stock: { belanak: 16, bandeng: 12, kakapputih: 5, kakap: 3, baronang: 4 } },
+  { id: 'M3', name: 'Akar Bakau M3', desc: 'Tepi lumpur di antara akar napas, sarang kakap', depth: '1–2 m', loc: 'bakau', minLv: 5, stock: { kakap: 8, kakapputih: 10, belanak: 8, kerapu: 2 } },
+  { id: 'G1', name: 'Teras Rumah Lanting G1', desc: 'Teras rumah apung di atas air hitam yang tenang', depth: '4–7 m', loc: 'gambut', minLv: 7, stock: { lais: 14, jelawat: 10, baung: 8, tapah: 3, toman: 3 } },
+  { id: 'G2', name: 'Dermaga Klotok G2', desc: 'Dermaga tempat perahu klotok bersandar, tepi tikungan dalam', depth: '5–9 m', loc: 'gambut', minLv: 7, stock: { tapah: 5, baung: 10, lais: 8, toman: 4, patin: 6 } },
+  { id: 'G3', name: 'Tepi Rawa G3', desc: 'Tepi hutan rawa gambut, gabus & toman berburu di bayangan pohon', depth: '1–3 m', loc: 'gambut', minLv: 7, stock: { gabus: 12, toman: 6, jelawat: 8, lais: 6 } },
+  { id: 'H1', name: 'Ujung Pemecah Ombak H1', desc: 'Ujung pemecah ombak dekat mercusuar, arus laut lepas', depth: '6–10 m', loc: 'pelabuhan', minLv: 10, stock: { barakuda: 8, tongkol: 10, kuwe: 3, layur: 6 } },
+  { id: 'H2', name: 'Dermaga Beton H2', desc: 'Dermaga kapal nelayan, layur naik ke bawah lampu', depth: '5–8 m', loc: 'pelabuhan', minLv: 10, stock: { layur: 16, kakap: 6, barakuda: 4, baronang: 6 } },
+  { id: 'H3', name: 'Titian Bagan H3', desc: 'Titian apung di samping bagan berlampu terang', depth: '8–12 m', loc: 'pelabuhan', minLv: 10, stock: { layur: 12, tongkol: 8, barakuda: 6, kakap: 4 } },
+  { id: 'R1', name: 'Pondok Apung R1', desc: 'Teras pondok di atas laguna toska, karang terlihat jelas', depth: '3–6 m', loc: 'laguna', minLv: 13, stock: { kakatua: 14, kerapu: 6, baronang: 8, kuwe: 3 } },
+  { id: 'R2', name: 'Pasir Putih R2', desc: 'Pantai pasir putih menghadap celah antar pulau karst', depth: '2–8 m', loc: 'laguna', minLv: 13, stock: { kuwe: 5, barakuda: 8, kakatua: 8, kakap: 4 } },
+  { id: 'R3', name: 'Tebing Karst R3', desc: 'Pinggir tebing batu kapur, air dalam tempat kuwe besar berpatroli', depth: '10–20 m', loc: 'laguna', minLv: 13, stock: { kuwe: 7, barakuda: 7, kerapu: 6, tongkol: 4 } },
 ];
 
 // pengali per sub-zona tempat umpan mendarat

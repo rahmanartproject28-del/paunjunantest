@@ -14,13 +14,16 @@ import { Palms } from './palms';
 import { Q } from '../core/quality';
 import { SereneScape, farTree } from './serene';
 import { FAR } from './farcut';
-import { IS_SERENE, LAKE, SPOT_PLACES } from './layout';
+import { IS_SERENE, LAKE, SPOT_PLACES, MAPSTYLE, IS_NEW } from './layout';
+import { NewMapScape } from './newmaps';
 import { terrainTime, setBedPhoto } from './terrain';
 
 export class World {
   palms: Palms;
   /** Danau Serene: pegunungan, pinus, pondok, air terjun, perahu layar, ikan terlihat */
   serene: SereneScape | null = null;
+  /** lima peta baru (kolam, gambut, bakau, laguna, pelabuhan) */
+  newmap: NewMapScape | null = null;
   sky: SkySystem; water: Water; veg: Vegetation; props: Props; life: LakeLife; more!: MoreLife; aquarium!: Aquarium; flow!: FlowFx; terrain: THREE.Mesh;
   weather: WeatherId = 'cerah';
   /** kecerahan pilihan pemain (1 = normal) */
@@ -100,6 +103,7 @@ export class World {
     this.props = new Props(a.rocks);
     scene.add(this.props.group);
     if (IS_SERENE) { this.serene = new SereneScape(a.fish, a.rocks[0]); scene.add(this.serene.group); this.props.lamps.push(...this.serene.lamps); }
+    if (IS_NEW) { this.newmap = new NewMapScape(); scene.add(this.newmap.group); this.props.lamps.push(...this.newmap.lamps); }
     this.life = new LakeLife(a.stork, a.parrot);
     scene.add(this.life.group);
     this.more = new MoreLife(a.stork); scene.add(this.more.group);
@@ -126,7 +130,7 @@ export class World {
     this.sky.update(hour, this.weather, time, focus);
     const N = this.sky.night;
     for (const bd of this.backdrops) { const c = (bd.material as THREE.MeshBasicMaterial).color; c.copy(this.sky.fogColor).lerp(new THREE.Color(1, 1, 1), 1 - N * 0.85).multiplyScalar(1 - N * 0.55); }
-    this.renderer.toneMappingExposure = ((IS_SERENE ? 0.74 : 0.55) + N * 0.3) * this.brightness;
+    this.renderer.toneMappingExposure = ((IS_SERENE ? 0.74 : MAPSTYLE ? MAPSTYLE.exposure : 0.55) + N * 0.3) * this.brightness;
     // lampu terdekat menyala sungguhan saat gelap (jumlah lampu tetap → tidak ada kompilasi ulang shader)
     if (N > 0.05) {
       const wp = new THREE.Vector3();
@@ -135,7 +139,7 @@ export class World {
     } else this.lampLights.forEach(l => { l.intensity = 0; });
     const fog = this.scene.fog as THREE.FogExp2;
     fog.color.copy(this.sky.fogColor);
-    fog.density = (this.weather === 'kabut' ? 0.011 : this.weather === 'hujan' ? 0.008 : IS_SERENE ? 0.00085 : 0.0032) * (1 - N * 0.35);
+    fog.density = (this.weather === 'kabut' ? 0.011 : this.weather === 'hujan' ? 0.008 : IS_SERENE ? 0.00085 : MAPSTYLE ? MAPSTYLE.fog : 0.0032) * (1 - N * 0.35);
     terrainTime.value = time;
     if (this.serene) { fog.color.lerp(this.sky.skyTop, 0.18); this.serene.haze.copy(this.sky.fogColor).lerp(this.sky.skyTop, 0.12); this.serene.update(dt, time, N, focus); }
     const u = this.water.material.uniforms;
@@ -151,6 +155,7 @@ export class World {
     this.life.update(dt, time, focus, (x, z, s) => this.water.addRipple(x, z, s));
     this.more.update(dt, time, focus, (x, z, s) => this.water.addRipple(x, z, s));
     this.flow.update(dt, time, focus);
+    this.newmap?.update(dt, time, this.sky.night, focus);
     if (this.aquarium.group.position.distanceToSquared(focus) < 60 * 60 || this.aqWatch) this.aquarium.update(time, this.sky.night);
   }
 }

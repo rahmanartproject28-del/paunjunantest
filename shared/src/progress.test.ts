@@ -13,7 +13,7 @@ describe('misi harian', () => {
     expect(makeMissions('p1', '20260927', 1)).toEqual(makeMissions('p1', '20260927', 1));
     expect(JSON.stringify(makeMissions('p1', '20260927', 1))).not.toBe(JSON.stringify(makeMissions('p1', '20260928', 1)));
     for (let d = 1; d <= 60; d++) for (const m of makeMissions('px' + d, '202609' + d, 1).list)
-      if (m.species) expect(['nila', 'mujair', 'mas', 'patin', 'gabus', 'baung', 'toman']).toContain(m.species);
+      if (m.species) expect(['nila', 'mujair', 'mas', 'patin', 'gabus', 'baung', 'toman', 'lele', 'bawal']).toContain(m.species); // level 1: danau + kolam pemancingan
     expect(makeMissions('p1', '20260927', 1).list.length).toBe(3);
   });
   it('tangkapan menambah progres, klaim sekali, bonus bila ketiganya selesai', async () => {

@@ -1,7 +1,7 @@
 // Pohon kelapa khas tepi danau di Indonesia: batang melengkung bercincin, pelepah menjuntai
 // dengan anak daun (tekstur dibuat kode), bergoyang tertiup angin.
 import * as THREE from 'three';
-import { groundH, lakeE, SPOT_PLACES, inKeramba, reserved, addObstacle, shoreXZ, toWaterAngle, LOC } from './layout';
+import { groundH, lakeE, SPOT_PLACES, inKeramba, reserved, addObstacle, shoreXZ, toWaterAngle, LOC, MAPSTYLE } from './layout';
 import { Q } from '../core/quality';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
@@ -89,14 +89,14 @@ export class Palms {
     // tempat: tepi danau, lebih banyak di dekat spot pemain
     let seed = 77; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     const spots: THREE.Matrix4[] = [];
-    const N = Math.round(46 * Q.trees * (LOC === 'serene' ? 0 : LOC === 'pantai' ? 3 : LOC === 'laut' ? 2.2 : LOC === 'sungai' ? 0.4 : 1)); // pantai & pulau: banyak kelapa
+    const N = Math.round(46 * Q.trees * (MAPSTYLE ? MAPSTYLE.palms : LOC === 'serene' ? 0 : LOC === 'pantai' ? 3 : LOC === 'laut' ? 2.2 : LOC === 'sungai' ? 0.4 : 1)); // pantai & pulau: banyak kelapa
     let tries = 0;
     while (spots.length < N && tries++ < 4000) {
       let x: number, z: number;
       if (rnd() < 0.5) { const sp = SPOT_PLACES[Math.floor(rnd() * SPOT_PLACES.length)]; const a = rnd() * 6.28, d = 7 + rnd() * 28; x = sp.pos.x + Math.cos(a) * d; z = sp.pos.z + Math.sin(a) * d; }
       else { const a = rnd() * 6.28, e = 1.03 + rnd() * 0.2; ({ x, z } = shoreXZ(a, e)); }
       const e = lakeE(x, z);
-      if (e < 1.02 || e > (LOC === 'pantai' ? 1.8 : LOC === 'laut' ? 1.7 : 1.3)) continue;
+      if (e < 1.02 || e > (LOC === 'kolam' ? 2.1 : LOC === 'laguna' ? 1.8 : LOC === 'bakau' ? 1.5 : LOC === 'pantai' ? 1.8 : LOC === 'laut' ? 1.7 : 1.3)) continue;
       if (groundH(x, z) < 0.15) continue;
       if (Math.abs(x) < 4 && z > -3 && z < 22) continue;
       if (SPOT_PLACES.some(s => Math.hypot(s.pos.x - x, s.pos.z - z) < 5)) continue;
