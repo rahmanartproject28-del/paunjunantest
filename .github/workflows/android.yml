@@ -10,6 +10,8 @@ on:
   push:
     branches: [main]
     paths: ['game/**', 'shared/**', 'package.json', '.github/workflows/android.yml']
+permissions:
+  contents: write   # untuk menerbitkan APK uji di halaman Releases
 concurrency:
   group: android-${{ github.ref }}
   cancel-in-progress: true
@@ -33,3 +35,13 @@ jobs:
       - run: cd game/android && ./gradlew assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with: { name: paunjunan-debug-apk, path: game/android/app/build/outputs/apk/debug/*.apk, retention-days: 14 }
+      # APK juga diterbitkan di halaman Releases supaya bisa diunduh langsung dari HP (tanpa ekstrak zip)
+      - name: Terbitkan APK uji di Releases
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          N=${{ github.run_number }}
+          cp game/android/app/build/outputs/apk/debug/app-debug.apk paunjunan-uji-$N.apk
+          SRV="${{ inputs.serverUrl || secrets.GAME_SERVER_URL }}"
+          gh release create "uji-$N" "paunjunan-uji-$N.apk" --prerelease --target "${{ github.sha }}" \
+            --title "APK uji #$N" \
+            --notes "APK uji (debug) dari commit ${{ github.sha }}. Server: ${SRV:-tidak ada, mode lokal/luring}. Pasang di HP: unduh .apk lalu izinkan instal dari sumber tidak dikenal. Bukan untuk Play Store (pakai workflow Rilis Android)."
