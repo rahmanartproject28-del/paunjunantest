@@ -1,0 +1,3 @@
+{ "compilerOptions": { "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler", "strict": true, "noImplicitAny": false, "noEmit": true, "skipLibCheck": true, "types": [], "lib": ["ES2022", "DOM"],
+  "paths": { "@paunjunan/shared": ["../../w/paunjunan/shared/src/index.ts"] } },
+  "include": ["stubs.d.ts", "node.d.ts", "../../w/paunjunan/server/src/*.ts"] }

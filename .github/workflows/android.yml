@@ -1,0 +1,33 @@
+# Membangun APK Android uji di GitHub (tanpa Android Studio di komputer Anda).
+# - Otomatis setiap ada perubahan kode game di cabang main (memastikan aplikasi tetap bisa dibangun).
+# - Manual: tab "Actions" → "Build Android" → "Run workflow" (boleh isi alamat server game).
+# Hasil APK ada di bagian "Artifacts" di halaman hasil workflow → unduh → pasang di HP (izinkan "sumber tidak dikenal").
+name: Build Android
+on:
+  workflow_dispatch:
+    inputs:
+      serverUrl: { description: 'Alamat server game (kosong = mode lokal/luring)', required: false, default: '' }
+  push:
+    branches: [main]
+    paths: ['game/**', 'shared/**', 'package.json', '.github/workflows/android.yml']
+concurrency: { group: android-${{ github.ref }}, cancel-in-progress: true }
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21, cache: gradle }
+      - run: npm install --legacy-peer-deps
+      - run: npm test
+      - name: Bangun game & salin ke proyek Android
+        run: VITE_SERVER_URL="${{ inputs.serverUrl || secrets.GAME_SERVER_URL }}" npm -w game run build && cd game && npx cap sync android
+      - name: Pastikan plugin HP terpasang (pembelian, tombol kembali, getar)
+        run: |
+          for p in NativePurchases App Haptics; do grep -q "$p" game/android/app/src/main/assets/capacitor.plugins.json || { echo "Plugin $p tidak ikut terpasang"; exit 1; }; done
+      - run: cd game/android && ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with: { name: paunjunan-debug-apk, path: game/android/app/build/outputs/apk/debug/*.apk, retention-days: 14 }

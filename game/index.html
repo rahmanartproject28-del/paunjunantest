@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#070b10">
+<title>PAUNJUNAN Mancing</title>
+<link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+<!-- tepi layar: merah saat bahaya, denyut jantung, gerak lambat (vinyet + pita sinema) -->
+<div id="vig" class="vig" aria-hidden="true"></div>
+
+<!-- Layar memuat -->
+<div id="loading">
+  <div class="brand big"><span class="mark"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M30 8v19a9 9 0 1 1-18 0" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><path d="M12 27l-4 4" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><circle cx="30" cy="8" r="3.5" fill="currentColor"/></svg></span><div><b>PAUNJUNAN</b><small>Papan Juara Pemancing</small></div></div>
+  <div class="bar"><i id="loadBar"></i></div>
+  <div class="hint" id="loadTxt">Menyiapkan danau…</div>
+</div>
+
+<!-- Menu utama di atas pemandangan 3D yang hidup -->
+<div id="menu" hidden>
+  <div class="menuCard">
+    <div class="brand"><span class="mark"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M30 8v19a9 9 0 1 1-18 0" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><path d="M12 27l-4 4" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><circle cx="30" cy="8" r="3.5" fill="currentColor"/></svg></span><div><b>PAUNJUNAN</b><small>Papan Juara Pemancing</small></div></div>
+    <div class="eyebrow"><i></i>Musim berjalan · tercatat langsung</div>
+    <h1 class="hero">SIAPA RAJA AIR <span>HARI INI?</span></h1>
+    <label class="field" id="nameField"><span>Nama pemancing</span><input id="nameIn" maxlength="18" autocomplete="nickname" placeholder="mis. RajaNila"></label>
+    <div class="spotPick" id="spotPick"></div>
+    <button class="btn big gold" id="startBtn">Mulai memancing</button>
+    <div class="row">
+      <button class="btn ghost" id="menuBoard">🏆 Peringkat</button>
+      <button class="btn ghost" id="menuSettings">⚙️ Pengaturan</button>
+    </div>
+    <button class="btn" id="locBtn" style="margin:6px auto 0;display:block">🌏 Lokasi: <b id="locName">Danau Keramba</b></button>
+    <div class="mode" id="modeTxt"></div>
+    <div class="acct" id="acctBox"></div>
+  </div>
+</div>
+
+<!-- HUD permainan (tata letak "Danau Serene") -->
+<div id="hud" hidden>
+  <!-- kiri atas: potret, nama, level, XP -->
+  <div class="me" id="meCard" role="button" aria-label="Profil pemain">
+    <div class="ava"><canvas id="avaCv" width="160" height="160"></canvas></div>
+    <div class="meBox">
+      <div class="meRow"><b id="meName">Pemancing</b><span class="lvTag">Lv. <b id="lvNum">1</b></span></div>
+      <div class="xp"><i id="xpBar"></i></div>
+      <div class="meRow sm"><span id="meSub">Pemula</span><span id="xpTxt">0 / 100</span></div>
+    </div>
+  </div>
+  <!-- mata uang -->
+  <div class="cur">
+    <button class="pill" id="coinPill" aria-label="Koin"><span class="coinIc"></span><b id="coinTxt">0</b><span class="plus">+</span></button>
+    <button class="pill" id="gemPill" aria-label="Permata"><span class="gemIc" id="gemIc"></span><b id="gemTxt">0</b><span class="plus">+</span></button>
+  </div>
+  <!-- Quest Harian -->
+  <div class="quest" id="questBox">
+    <button class="qHead" id="questHead"><span class="qi" id="questIc"></span><b>Quest Harian</b><i id="missionBadge" class="badge" hidden>0</i></button>
+    <div id="questList" class="qList"></div>
+  </div>
+  <!-- kanan atas: Tas, Toko, Menu + peta mini, lokasi, jam -->
+  <div class="tr">
+    <div class="tbtns">
+      <button class="tb" id="bagBtn"><span class="ti" id="icBag"></span><span>Tas</span><i id="basketBadge" class="badge dim" hidden>0</i></button>
+      <button class="tb" id="warungBtn"><span class="ti" id="icCart"></span><span>Toko</span></button>
+      <button class="tb" id="menuBtn"><span class="ti" id="icMenu"></span><span>Menu</span><i id="menuBadge" class="badge" hidden>0</i></button>
+    </div>
+    <div class="mapCol">
+      <div class="mmWrap" id="mmWrap"><canvas id="minimap" class="minimap"></canvas></div>
+      <div class="locPill"><b><span class="pinIc" id="pinIc"></span><span id="locTxt">Danau Serene</span></b><span id="coordTxt">(0, 0)</span></div>
+      <div class="timePill"><span class="tIc" id="sunIc"></span><b id="clockTxt">--:--</b><span class="tIc wx" id="wxIc"></span></div>
+    </div>
+  </div>
+  <button id="eventRibbon" class="evRib" hidden></button>
+
+  <!-- joystick (selalu tampil: sentuh untuk berdiri & berjalan) -->
+  <div id="joy" class="joy" aria-label="Joystick berjalan"><i class="ja n"></i><i class="ja e"></i><i class="ja s"></i><i class="ja w"></i><div id="joyKnob" class="joyKnob"></div></div>
+  <!-- baris obrolan dunia -->
+  <button class="chatLine" id="chatLine"><span class="chIc" id="chIc"></span><span id="chatTick" class="chTxt"><b>[Dunia]</b> Selamat datang di PAUNJUNAN!</span><i id="chatBadge" class="badge" hidden>0</i></button>
+  <!-- hotbar barang -->
+  <div class="hotbar" id="hotbar"></div>
+  <!-- tombol kanan: Umpan, Lempar/Angkat, Tarik -->
+  <button class="rbtn umpan" id="baitBtn"><span class="ri" id="icUmpan"></span><span>Umpan</span></button>
+  <button class="rbtn small" id="subBtn" aria-label="Angkat kail"><span class="ri" id="subIc"></span></button>
+  <!-- mancing otomatis: tombol di spot + bilah status -->
+  <button class="rbtn autob" id="autoBtn" aria-label="Mancing otomatis"><span class="ri">🤖</span><span id="autoBtnTxt">Otomatis</span></button>
+  <div id="afBar" class="afBar" hidden role="status"><span class="afDot"></span><b>Mancing otomatis</b><span id="afTxt"></span><button id="afStop">■ Berhenti</button></div>
+  <div class="actWrap">
+    <!-- pengukur tegangan senar saat adu tarik (busur di sekeliling tombol TARIK!) -->
+    <svg class="tgauge" id="tGauge" viewBox="0 0 160 160" aria-hidden="true">
+      <path id="tgTrack" class="tgTrack"/><g id="tgZones"></g><path id="tgFill" class="tgFill"/><circle id="tgDot" class="tgDot" r="4"/>
+    </svg>
+    <svg class="ring" viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" class="rTrk"/><circle cx="60" cy="60" r="54" id="powerRing" class="rVal"/></svg>
+    <button id="actBtn" class="actBtn"><span id="actIcon" class="aIc"></span><b id="actTxt2">Lempar</b></button>
+  </div>
+
+  <!-- tambahan saat berjalan -->
+  <div id="walkUi" hidden>
+    <div class="walkBtns">
+      <button class="wbtn" id="ctxBtn" hidden></button>
+      <button class="wbtn" id="paceBtn">🚶 Jalan</button>
+      <button class="wbtn" id="sitHereBtn">🪑 Duduk di sini</button>
+      <button class="wbtn gold" id="fishHereBtn">🎣 Mancing di sini</button>
+    </div>
+    <div id="autoBar" class="autoBar" hidden><span id="autoTxt">Menuju…</span><button id="autoStop">Berhenti</button></div>
+  </div>
+
+  <!-- tombol & teks lama yang kini dibuka lewat Menu/Tas (tetap dipakai kode) -->
+  <div class="legacy" hidden>
+    <button id="mapBtn"></button><button id="missionBtn"></button><button id="hubBtn"></button><button id="chatBtn"></button>
+    <button id="camBtn"></button><button id="soundBtn"></button><button id="setBtn"></button><button id="homeBtn"></button>
+    <button id="standBtn"></button><span id="standSub"></span><button id="waveBtn"></button><button id="boardBtn"></button><button id="basketBtn"></button>
+    <b id="baitTxt"></b><small id="baitQty"></small><small id="basketQty"></small><span id="spotTxt"></span><i id="lvRing"></i>
+  </div>
+
+  <!-- Panduan interaktif -->
+  <div id="coach" class="coach" hidden><small id="coachNum">Panduan</small><p id="coachTxt"></p><button id="coachSkip">Lewati panduan</button></div>
+
+  <div id="aimHint" class="aimHint">Geser layar untuk membidik</div>
+
+  <!-- Saran saat spot sepi -->
+  <div id="tipCard" class="tipCard" hidden role="status"><span class="tipIc">💡</span><div class="tipBody"><b>Spot sepi? Coba ini</b><ul id="tipList"></ul></div>
+    <div class="tipBtns"><button id="tipAct" class="btn gold" hidden></button><button id="tipX" class="ic" aria-label="Tutup saran">✕</button></div></div>
+
+  <!-- Panel adu tarik -->
+  <div id="fight" hidden>
+    <svg viewBox="0 0 200 118" class="gauge">
+      <path d="M20 100 A80 80 0 0 1 180 100" class="trk"/>
+      <path id="gSlack" class="zone slack"/><path id="gGold" class="zone gold"/><path id="gRed" class="zone red"/>
+      <line id="gNeedle" x1="100" y1="100" x2="100" y2="28" class="needle"/>
+      <circle cx="100" cy="100" r="6" class="hub"/>
+    </svg>
+    <div class="fRow"><span>Tenaga ikan</span><div class="stam"><i id="stamBar"></i></div><b id="distTxt">12 m</b></div>
+    <div class="cmd" id="cmdTxt">TAHAN UNTUK MENGGULUNG</div>
+    <div class="act" id="actTxt"></div>
+    <div class="combo" id="comboTxt"></div>
+    <div class="dragRow"><span>Rem reel</span><button id="dragDn">−</button><b id="dragTxt">3</b><button id="dragUp">+</button></div>
+  </div>
+  <button id="powerBtn" class="powerBtn" hidden>TARIKAN KUAT!</button>
+  <button id="liftBtn" class="liftBtn" hidden>⬆ ANGKAT JORAN!</button>
+  <div id="netUi" class="netUi" hidden><b id="netTitle">SEROK</b><div class="netBar"><i id="netFill"></i></div>
+    <div class="netTrack"><span id="netZone" class="netZone"></span><span id="netCue" class="netCue"></span></div><small id="netHint"></small></div>
+
+  <div id="fpsBox" class="fps" hidden></div>
+</div>
+
+<div id="banner" class="banner" hidden></div>
+<div id="caption" class="caption" hidden></div>
+<div id="flash" class="flash"></div>
+<div id="toasts"></div>
+
+<!-- Kartu tangkapan (gaya "IKAN BERHASIL DITANGKAP!") -->
+<div id="catchToast" class="catchToast" hidden><span class="okIc">✓</span><div><b>Ikan berhasil ditangkap!</b><small><em id="cXp">+0 Exp</em><i class="coinIc"></i><span id="ctCoin">0 Koin</span></small></div></div>
+<div id="catchCard" class="card catch2" hidden>
+  <div class="cBanner"><span class="cbIc" id="cbIc"></span><b>IKAN BERHASIL<br>DITANGKAP!</b></div>
+  <div class="cBox">
+    <div class="cPic"><canvas id="cFishCv" width="300" height="220"></canvas><span id="cRecord" class="rec"></span></div>
+    <div class="cInfo">
+      <div class="cTitle"><h2 id="cName">Nila</h2><span id="cTier" class="tier">Rare</span></div>
+      <div class="cRow"><span>Berat</span><b><span id="cWeight">0,00</span> kg</b></div>
+      <div class="cRow"><span>Panjang</span><b id="cLen">—</b></div>
+      <div class="cRow"><span>Nilai</span><b class="cValB"><i class="coinIc"></i><span id="cVal">—</span></b></div>
+      <div class="cMeta"><span class="stars" id="cStars"></span><span>Adu tarik <b id="cDur">—</b></span></div>
+    </div>
+    <div class="cTools"><button id="shareBtn" class="ct" aria-label="Bagikan">⤴</button><button id="spinBtn" class="ct" aria-label="Lihat 360°">360°</button></div>
+  </div>
+  <div class="cBtns"><button class="btn lepas" id="releaseBtn">Lepas</button><button class="btn simpan" id="keepBtn"><span class="ck">✓</span> Simpan</button></div>
+</div>
+
+<!-- Kartu ikan lepas -->
+<div id="lossCard" class="card loss" hidden>
+  <h3 id="lossTitle">Senar putus</h3>
+  <p id="lossWhy"></p>
+  <p class="tip" id="lossTip"></p>
+</div>
+
+<!-- Lembar serbaguna (umpan, keranjang, spot, peringkat, pengaturan) -->
+<div id="sheet" class="sheet" hidden>
+  <div class="sheetBox">
+    <div class="sheetHead"><h3 id="sheetTitle"></h3><button class="ic" id="sheetClose">✕</button></div>
+    <div id="sheetBody"></div>
+  </div>
+</div>
+
+<div id="errBox" class="errBox" hidden></div>
+<script type="module" src="./src/main.ts"></script>
+</body>
+</html>

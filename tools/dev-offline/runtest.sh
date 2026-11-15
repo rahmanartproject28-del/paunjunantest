@@ -1,0 +1,3 @@
+#!/bin/bash
+# jalankan satu file uji dengan shim vitest
+/opt/npm-tools/node_modules/esbuild/bin/esbuild "$1" --bundle --platform=node --format=esm --alias:@paunjunan/shared=/home/claude/w/paunjunan/shared/src/index.ts --alias:vitest=/home/claude/chk/vitest-shim.ts --alias:three=/home/claude/chk/stub/three.ts --alias:@capacitor/core=/home/claude/w/paunjunan/game/src/artifact/capacitor.ts --alias:@capacitor/app=/home/claude/w/paunjunan/game/src/artifact/capacitor.ts --alias:@capacitor/haptics=/home/claude/w/paunjunan/game/src/artifact/capacitor.ts --outfile=/tmp/t.mjs --log-level=error && node /tmp/t.mjs

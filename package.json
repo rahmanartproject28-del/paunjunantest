@@ -1,0 +1,29 @@
+{
+  "name": "paunjunan",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "shared",
+    "game",
+    "server"
+  ],
+  "scripts": {
+    "dev": "npm -w game run dev",
+    "build": "npm -w game run build",
+    "server": "npm -w server run dev",
+    "test": "npm -w shared test && npm -w server test",
+    "typecheck": "tsc -p shared && tsc -p server --noEmit && tsc -p game --noEmit",
+    "artifact": "node tools/build-artifact.mjs"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0",
+    "@types/node": "^22.0.0",
+    "@types/three": "0.186.0",
+    "@types/ws": "^8.5.0",
+    "playwright": "^1.63.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vite": "^8.0.0",
+    "vitest": "^4.0.0"
+  }
+}

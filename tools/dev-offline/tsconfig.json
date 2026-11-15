@@ -1,0 +1,4 @@
+{ "compilerOptions": { "target": "ES2020", "module": "ESNext", "moduleResolution": "Bundler", "strict": true, "noImplicitAny": false, "noEmit": true,
+  "lib": ["ES2022","DOM","DOM.Iterable"], "skipLibCheck": true, "types": [],
+  "paths": { "@paunjunan/shared": ["../w/paunjunan/shared/src/index.ts"] } },
+  "include": ["three-stub.d.ts", "../w/paunjunan/game/src/**/*.ts"] }

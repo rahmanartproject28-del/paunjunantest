@@ -1,0 +1,22 @@
+{
+  "name": "@paunjunan/game",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "cap:sync": "cap sync"
+  },
+  "dependencies": {
+    "three": "0.186.1",
+    "@dgreenheck/ez-tree": "1.1.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capgo/native-purchases": "^8.9.16"
+  }
+}

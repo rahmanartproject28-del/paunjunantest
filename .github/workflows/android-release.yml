@@ -1,0 +1,47 @@
+# Rilis Play Store: AAB + APK bertanda tangan. Jalankan dari tab Actions → "Rilis Android" → isi nomor versi.
+# Panduan lengkap (Play Console, beli koin, uji tertutup): docs/RILIS-ANDROID.md
+# Secrets yang perlu diisi (Settings → Secrets and variables → Actions):
+#   ANDROID_KEYSTORE_BASE64  (isi berkas .jks dalam base64:  base64 -w0 paunjunan.jks)
+#   ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+#   GAME_SERVER_URL          (mis. https://game.domainanda.com — dibenamkan ke build)
+# Buat kunci sekali saja (simpan cadangannya! hilang = tidak bisa memperbarui aplikasi di Play Store):
+#   keytool -genkey -v -keystore paunjunan.jks -keyalg RSA -keysize 2048 -validity 10000 -alias paunjunan
+name: Rilis Android
+on:
+  workflow_dispatch:
+    inputs:
+      versionCode: { description: 'Nomor versi (angka, selalu naik: 2, 3, 4…)', required: true }
+      versionName: { description: 'Nama versi (mis. 1.0.1)', required: true }
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21, cache: gradle }
+      - run: npm install --legacy-peer-deps
+      - run: npm test
+      - name: Bangun game (alamat server dibenamkan)
+        run: VITE_SERVER_URL="${{ secrets.GAME_SERVER_URL }}" npm -w game run build && cd game && npx cap sync android
+      - name: Pastikan plugin HP terpasang (pembelian, tombol kembali, getar)
+        run: |
+          for p in NativePurchases App Haptics; do grep -q "$p" game/android/app/src/main/assets/capacitor.plugins.json || { echo "Plugin $p tidak ikut terpasang"; exit 1; }; done
+      - name: Pasang kunci tanda tangan
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > $RUNNER_TEMP/paunjunan.jks
+      - name: Bangun AAB & APK rilis
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/paunjunan.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION_CODE: ${{ inputs.versionCode }}
+          VERSION_NAME: ${{ inputs.versionName }}
+        run: cd game/android && ./gradlew bundleRelease assembleRelease
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paunjunan-rilis-${{ inputs.versionName }}
+          path: |
+            game/android/app/build/outputs/bundle/release/*.aab
+            game/android/app/build/outputs/apk/release/*.apk

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PAUNJUNAN</string>
+    <string name="title_activity_main">PAUNJUNAN</string>
+    <string name="package_name">com.paunjunan.mancing</string>
+    <string name="custom_url_scheme">com.paunjunan.mancing</string>
+</resources>

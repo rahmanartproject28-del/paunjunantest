@@ -1,0 +1,98 @@
+declare module 'three' {
+  export const ACESFilmicToneMapping: any; export type ACESFilmicToneMapping = any;
+  export const AdditiveBlending: any; export type AdditiveBlending = any;
+  export const AmbientLight: any; export type AmbientLight = any;
+  export const AnimationAction: any; export type AnimationAction = any;
+  export const AnimationMixer: any; export type AnimationMixer = any;
+  export const BackSide: any; export type BackSide = any;
+  export const Bone: any; export type Bone = any;
+  export const Box3: any; export type Box3 = any;
+  export const BoxGeometry: any; export type BoxGeometry = any;
+  export const BufferAttribute: any; export type BufferAttribute = any;
+  export const BufferGeometry: any; export type BufferGeometry = any;
+  export const Camera: any; export type Camera = any;
+  export const CanvasTexture: any; export type CanvasTexture = any;
+  export const CapsuleGeometry: any; export type CapsuleGeometry = any;
+  export const CatmullRomCurve3: any; export type CatmullRomCurve3 = any;
+  export const CircleGeometry: any; export type CircleGeometry = any;
+  export const ClampToEdgeWrapping: any; export type ClampToEdgeWrapping = any;
+  export const Color: any; export type Color = any;
+  export const ConeGeometry: any; export type ConeGeometry = any;
+  export const CubicBezierCurve3: any; export type CubicBezierCurve3 = any;
+  export const CylinderGeometry: any; export type CylinderGeometry = any;
+  export const DataTexture: any; export type DataTexture = any;
+  export const DirectionalLight: any; export type DirectionalLight = any;
+  export const DodecahedronGeometry: any; export type DodecahedronGeometry = any;
+  export const DoubleSide: any; export type DoubleSide = any;
+  export const EdgesGeometry: any; export type EdgesGeometry = any;
+  export const Euler: any; export type Euler = any;
+  export const ExtrudeGeometry: any; export type ExtrudeGeometry = any;
+  export const Float32BufferAttribute: any; export type Float32BufferAttribute = any;
+  export const FogExp2: any; export type FogExp2 = any;
+  export const Group: any; export type Group = any;
+  export const HalfFloatType: any; export type HalfFloatType = any;
+  export const HemisphereLight: any; export type HemisphereLight = any;
+  export const IcosahedronGeometry: any; export type IcosahedronGeometry = any;
+  export const ImageLoader: any; export type ImageLoader = any;
+  export const InstancedBufferAttribute: any; export type InstancedBufferAttribute = any;
+  export const InstancedMesh: any; export type InstancedMesh = any;
+  export const Interpolant: any; export type Interpolant = any;
+  export const LatheGeometry: any; export type LatheGeometry = any;
+  export const LineBasicMaterial: any; export type LineBasicMaterial = any;
+  export const LineSegments: any; export type LineSegments = any;
+  export const LinearFilter: any; export type LinearFilter = any;
+  export const LoadingManager: any; export type LoadingManager = any;
+  export const Material: any; export type Material = any;
+  export const MathUtils: any; export type MathUtils = any;
+  export const Matrix4: any; export type Matrix4 = any;
+  export const Mesh: any; export type Mesh = any;
+  export const MeshBasicMaterial: any; export type MeshBasicMaterial = any;
+  export const MeshLambertMaterial: any; export type MeshLambertMaterial = any;
+  export const MeshPhongMaterial: any; export type MeshPhongMaterial = any;
+  export const MeshStandardMaterial: any; export type MeshStandardMaterial = any;
+  export const MirroredRepeatWrapping: any; export type MirroredRepeatWrapping = any;
+  export const Object3D: any; export type Object3D = any;
+  export const OrthographicCamera: any; export type OrthographicCamera = any;
+  export const PCFShadowMap: any; export type PCFShadowMap = any;
+  export const PCFSoftShadowMap: any; export type PCFSoftShadowMap = any;
+  export const PMREMGenerator: any; export type PMREMGenerator = any;
+  export const PerspectiveCamera: any; export type PerspectiveCamera = any;
+  export const Plane: any; export type Plane = any;
+  export const PlaneGeometry: any; export type PlaneGeometry = any;
+  export const PointLight: any; export type PointLight = any;
+  export const Points: any; export type Points = any;
+  export const PointsMaterial: any; export type PointsMaterial = any;
+  export const QuadraticBezierCurve3: any; export type QuadraticBezierCurve3 = any;
+  export const Quaternion: any; export type Quaternion = any;
+  export const RepeatWrapping: any; export type RepeatWrapping = any;
+  export const RingGeometry: any; export type RingGeometry = any;
+  export const SRGBColorSpace: any; export type SRGBColorSpace = any;
+  export const Scene: any; export type Scene = any;
+  export const ShaderMaterial: any; export type ShaderMaterial = any;
+  export const Shape: any; export type Shape = any;
+  export const ShapeGeometry: any; export type ShapeGeometry = any;
+  export const SkinnedMesh: any; export type SkinnedMesh = any;
+  export const SphereGeometry: any; export type SphereGeometry = any;
+  export const Sprite: any; export type Sprite = any;
+  export const SpriteMaterial: any; export type SpriteMaterial = any;
+  export const Texture: any; export type Texture = any;
+  export const TextureLoader: any; export type TextureLoader = any;
+  export const TorusGeometry: any; export type TorusGeometry = any;
+  export const TubeGeometry: any; export type TubeGeometry = any;
+  export const UniformsLib: any; export type UniformsLib = any;
+  export const UniformsUtils: any; export type UniformsUtils = any;
+  export const Vector2: any; export type Vector2 = any;
+  export const Vector3: any; export type Vector3 = any;
+  export const Vector4: any; export type Vector4 = any;
+  export const WebGLRenderTarget: any; export type WebGLRenderTarget = any;
+  export const WebGLRenderer: any; export type WebGLRenderer = any;
+  export const MathUtils: any; export const REVISION: any;
+}
+declare module 'three/examples/jsm/loaders/GLTFLoader.js' { export const GLTFLoader: any; export type GLTFLoader = any; export type GLTF = any; }
+declare module 'three/examples/jsm/utils/SkeletonUtils.js' { export const clone: any; }
+declare module 'three/*';
+declare module 'three/examples/jsm/postprocessing/EffectComposer.js' { export const EffectComposer: any; export type EffectComposer = any; }
+declare module 'ez-tree-src/*' { const x: any; export = x; }
+declare module '@capacitor/haptics' { export const Haptics: any; export const ImpactStyle: any; }
+declare module '@capacitor/app' { export const App: any; }
+declare module '@capacitor/core' { export const Capacitor: any; }
