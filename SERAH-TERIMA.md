@@ -1,7 +1,7 @@
 # SERAH TERIMA — PAUNJUNAN v2 · versi 0.10.0
 
 > Diperbarui 15 November 2026 (v0.10.0). Untuk melanjutkan di akun Claude lain, lampirkan di percakapan baru:
-> 1. **`PAUNJUNAN-LENGKAP-v0.9.7.zip`** — WAJIB. Isi: `1-game-dan-server/` (kode game + server + shared + aset game + alat uji offline), `2-website-ci4/` (website peringkat + panel pengelola, CodeIgniter 4.7), prototipe siap main, dokumen ini, `REKAP-FITUR-PAUNJUNAN.md`, `ASET-BACA-DULU.md`, `PANDUAN-GERAKAN-DAN-KENYAMANAN.md`.
+> 1. **`PAUNJUNAN-LENGKAP-v0.10.0.zip`** — WAJIB. Isi: `1-game-dan-server/` (kode game + server + shared + aset game + alat uji offline + `riwayat-git.bundle`), `2-website-ci4/` (website peringkat + panel pengelola, CodeIgniter 4.7), `3-database-hpanel/` (SQL website untuk phpMyAdmin), `4-apk/` (APK uji terakhir), prototipe siap main, dokumen ini, `REKAP-FITUR-PAUNJUNAN.md`, `ASET-BACA-DULU.md`, `PANDUAN-GERAKAN-DAN-KENYAMANAN.md`.
 > 2. (hanya bila mau memasang aset/animasi tambahan) paket aset, dipecah 5 berkas supaya tiap berkas di bawah batas unggah 30 MB: `aset-1-animasi.zip`, `aset-2-ikan-air-efek-suara.zip`, `aset-3-langit.zip`, `aset-4-tanah.zip`, `aset-5-properti.zip`. `tools/make-motion.py` butuh `aset-1-animasi.zip` (folder `1-animasi-avatar/rpm-pria`; nama subfolder `idle/` dan `locomotion/` sama dengan aslinya).
 >
 > Lalu tulis: *"Lanjutkan proyek PAUNJUNAN v2 sesuai SERAH-TERIMA.md."* Bagian 0 (yang terbaru ada di akhir bagian itu: v0.10.0) dan bagian 7–8 berisi keadaan terakhir dan pekerjaan berikutnya.
@@ -281,6 +281,17 @@ Urut prioritas (P1 = paling terasa bagi pemain):
 24. Dasbor admin web untuk server game (v2: panel di dalam game + website PHP untuk kompetisi & pengumuman).
 
 ## 8. Langkah berikutnya yang disarankan
+
+**KEADAAN TERBARU (15 Nov 2026, setelah v0.10.0) — kerjakan ini dulu:**
+- **Repo GitHub**: `rahmanartproject28-del/paunjunantest` (Claude GitHub App sudah dipasang pemilik). Build Android otomatis lulus sampai **uji-7** (Releases). Secret yang BELUM diisi pemilik: 4 kunci Android (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`; berkas kunci sudah diserahkan ke pemilik, tidak ada di repo/zip) dan `GAME_SERVER_URL`.
+- **Keputusan hosting (sudah didiskusikan)**: hPanel pemilik = Hostinger Business Web Hosting (2 core, ±3 GB RAM, 60 entry process, LiteSpeed, MariaDB 10.5, tanpa SSH). Paket ini **tidak menerima WebSocket masuk** dan memutus permintaan > 120 dtk → cocok untuk **website CI4**, TIDAK untuk server game. Server game → **VPS Hostinger KVM 2, Jakarta** (2 vCPU, 8 GB; KVM 1 hanya untuk awal ±300–500 online). Target pemilik: **maks. 1.000 pemain online bersamaan**.
+- **WAJIB sebelum 1.000 online — optimasi jaringan** (`server/src/app.ts` snapTimer + `shared/protocol.ts` + `game/src/core/net.ts` + `game/crowd.ts`): sekarang tiap snap mengirim semua pemain ruang + seluruh `look` (±13,6 KB/pesan untuk 40 pemain, 5 Hz) → ±540 Mbps & puluhan TB/bln pada 1.000 online. Rencana: `look` dikirim sekali (saat masuk/ganti), snap ringkas (array angka ±25 B/pemain), hanya ±15 pemain terdekat, 4 Hz (lebih jarang untuk yang diam), permessage-deflate. Target ±10–15 Mbps, ±1–2 TB/bln.
+- **Pengamanan ekonomi tukar sebelum dibuka umum**: tukar hanya akun terdaftar (bukan tamu), batas koin tukar per hari, riwayat transaksi di panel admin (website CI4 + `/api/admin/...`).
+- **Skrip pemasangan VPS** (belum dibuat): Node 22 + MariaDB + skema `server/database/schema.sql` + pm2 + Nginx/Caddy (HTTPS + WSS, subdomain mis. `game.domain`) + firewall (80/443/SSH) + backup `mysqldump` harian + `.env` (DB_*, ADMIN_TOKEN sama dengan website, ALLOWED_ORIGINS, SMTP_* smtp.hostinger.com:465, nanti GOOGLE_SERVICE_ACCOUNT_JSON). Redis/Docker/voice TIDAK diperlukan untuk ≤1.000 online.
+- **Uji beban** (belum dibuat): bot HTTP + WebSocket 500–2.000 pemain ke VPS untuk angka kapasitas nyata.
+- Pertanyaan engine sudah dijawab: tetap Three.js (tidak pindah Unity/Godot sekarang); batas skala ada di server, bukan engine.
+- Lingkungan Claude: `tools/dev-offline/` (typecheck, tes dengan shim vitest, tangkapan layar 3D) memakai path `/home/claude/...` — sesuaikan di akun baru. Tes server (`server/src/*.test.ts`) butuh `npm install` (fastify, ws) — di lingkungan tanpa internet hanya jalan di CI GitHub.
+
 
 0. **Grafis dunia P2** (bagian 7 butir 10–12): silau matahari (aset `6-efek/lensflare` di paket aset-2), kabut pagi berlapis, burung formasi V, efek sinematik (gradasi, vinyet, butiran) untuk tingkat Tinggi.
 0b. Pemilik memutuskan angka bawaan **mancing otomatis** (panel admin → 🤖 Otomatis) dan kebijakan **main luring** (v0.9.3).
