@@ -10,7 +10,9 @@ on:
   push:
     branches: [main]
     paths: ['game/**', 'shared/**', 'package.json', '.github/workflows/android.yml']
-concurrency: { group: android-${{ github.ref }}, cancel-in-progress: true }
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   apk:
     runs-on: ubuntu-latest
