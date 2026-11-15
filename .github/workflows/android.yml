@@ -32,16 +32,36 @@ jobs:
       - name: Pastikan plugin HP terpasang (pembelian, tombol kembali, getar)
         run: |
           for p in NativePurchases App Haptics; do grep -q "$p" game/android/app/src/main/assets/capacitor.plugins.json || { echo "Plugin $p tidak ikut terpasang"; exit 1; }; done
-      - run: cd game/android && ./gradlew assembleDebug --no-daemon
+      # Bila kunci tanda tangan sudah diisi di Secrets: APK RILIS bertanda tangan tetap (lolos pemeriksaan Play Protect lebih
+      # mudah, bisa didaftarkan di verifikasi developer Google, dan pembaruan bisa dipasang di atas versi lama).
+      # Bila belum: APK debug (kunci acak tiap build → Play Protect sering memperingatkan, pembaruan harus copot dulu).
+      - name: Bangun APK
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 0.9.${{ github.run_number }}-uji
+        run: |
+          cd game/android
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/pj.jks"
+            ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/pj.jks" ./gradlew assembleRelease --no-daemon
+            cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/paunjunan.apk"; echo "APK_KIND=rilis bertanda tangan" >> "$GITHUB_ENV"
+          else
+            ./gradlew assembleDebug --no-daemon
+            cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/paunjunan.apk"; echo "APK_KIND=debug (belum bertanda tangan tetap)" >> "$GITHUB_ENV"
+          fi
       - uses: actions/upload-artifact@v4
-        with: { name: paunjunan-debug-apk, path: game/android/app/build/outputs/apk/debug/*.apk, retention-days: 14 }
+        with: { name: paunjunan-apk, path: paunjunan.apk, retention-days: 14 }
       # APK juga diterbitkan di halaman Releases supaya bisa diunduh langsung dari HP (tanpa ekstrak zip)
       - name: Terbitkan APK uji di Releases
         env: { GH_TOKEN: '${{ github.token }}' }
         run: |
           N=${{ github.run_number }}
-          cp game/android/app/build/outputs/apk/debug/app-debug.apk paunjunan-uji-$N.apk
+          cp paunjunan.apk paunjunan-uji-$N.apk
           SRV="${{ inputs.serverUrl || secrets.GAME_SERVER_URL }}"
           gh release create "uji-$N" "paunjunan-uji-$N.apk" --prerelease --target "${{ github.sha }}" \
             --title "APK uji #$N" \
-            --notes "APK uji (debug) dari commit ${{ github.sha }}. Server: ${SRV:-tidak ada, mode lokal/luring}. Pasang di HP: unduh .apk lalu izinkan instal dari sumber tidak dikenal. Bukan untuk Play Store (pakai workflow Rilis Android)."
+            --notes "APK uji ($APK_KIND) dari commit ${{ github.sha }}. Server: ${SRV:-tidak ada, mode lokal/luring}. Pasang di HP: unduh .apk lalu izinkan instal dari sumber tidak dikenal. Bukan untuk Play Store (pakai workflow Rilis Android)."

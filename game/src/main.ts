@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { SPECIES, BAITS, RODS, LINES, WEATHER, levelInfo, basketCap, type WeatherId, type BaitId, type RodId, type LineId, type Player } from '@paunjunan/shared';
 import { loadAssets } from './core/assets';
-import { Q, tier, settings, targetFps, DynRes, isMobile } from './core/quality';
+import { Q, tier, settings, targetFps, DynRes, FramePacer, saverOn, isMobile } from './core/quality';
 import { LocalBackend, RemoteBackend, type Backend } from './core/backend';
 import { setMotion, Angler } from './actors/angler';
 import { HybridBackend } from './core/hybrid';
@@ -48,7 +48,9 @@ function showErr(s: string) { const b = $('errBox'); b.hidden = false; b.textCon
 // ---------- renderer hemat daya ----------
 const canvas = $('c') as unknown as HTMLCanvasElement;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: Q.antialias && !isMobile, powerPreference: tier === 'tinggi' ? 'high-performance' : 'low-power', stencil: false });
-const dyn = new DynRes(Q.maxDpr);
+const dyn = new DynRes(Q.maxDpr, () => (saverOn() ? 0.85 : 1));
+if (isMobile) document.documentElement.classList.add('mobile');
+const pacer = new FramePacer();
 renderer.setPixelRatio(dyn.dpr);
 // HP ber-RAM kecil: bila sistem mengambil memori grafis (context lost), muat ulang dengan rapi — progres aman di server/perangkat
 canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); toast('Memori grafis penuh — memuat ulang…', 3000); setTimeout(() => location.reload(), 1200); });
@@ -71,7 +73,7 @@ renderer.toneMappingExposure = 0.55;
 const scene = new THREE.Scene();
 const cam = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.05, 3000);
 cam.layers.enable(1);
-addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); composer?.setSize(innerWidth, innerHeight); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); FishingLine.resize(innerWidth, innerHeight); });
+addEventListener('resize', () => { pacer.force(); renderer.setSize(innerWidth, innerHeight); composer?.setSize(innerWidth, innerHeight); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); FishingLine.resize(innerWidth, innerHeight); });
 
 // ---------- waktu & cuaca dunia ----------
 const timePref = () => store.get<string>('timeMode', 'nyata');
@@ -861,6 +863,7 @@ let net: Net | null = null;
       <div class="set"><span>Getaran</span>${seg('vibrate', [['1', 'Nyala'], ['0', 'Mati']], settings.vibrate ? '1' : '0')}</div>
       <div class="set"><span>Tingkat grafis<br><small style="color:var(--dim)">Sekarang: ${tier}</small></span>${seg('tier', [['auto', 'Otomatis'], ['hemat', 'Hemat'], ['sedang', 'Sedang'], ['tinggi', 'Tinggi']], settings.tierPref)}</div>
       <div class="set"><span>Batas FPS</span>${seg('fps', [['auto', 'Otomatis'], ['30', '30'], ['45', '45'], ['60', '60']], String(settings.fpsPref))}</div>
+      <div class="set"><span>Main lama (hemat baterai)<br><small style="color:var(--dim)">Lebih dingin & awet: resolusi sedikit turun, 20 FPS saat menunggu ikan</small></span>${seg('saver', [['auto', 'Otomatis'], ['on', 'Nyala'], ['off', 'Mati']], settings.saverPref)}</div>
       <div class="set"><span>Tampilkan FPS</span>${seg('showFps', [['1', 'Ya'], ['0', 'Tidak']], settings.showFps ? '1' : '0')}</div>
       <div class="set"><span>Suara alam</span>${seg('ambVol', [['0', 'Mati'], ['0.6', 'Pelan'], ['1', 'Normal']], String(sound.ambVol))}</div>
       <div class="set"><span>Musik latar</span>${seg('musicVol', [['0', 'Mati'], ['0.5', 'Pelan'], ['1', 'Normal']], String(sound.musicVol))}</div>
@@ -883,6 +886,7 @@ let net: Net | null = null;
         if (key === 'sound') { initAudio(); setMuted(v === '0'); $('soundBtn').textContent = settings.sound ? '🔊' : '🔇'; }
         if (key === 'vibrate') settings.vibrate = v === '1';
         if (key === 'showFps') settings.showFps = v === '1';
+        if (key === 'saver') settings.saverPref = v as 'auto';
         if (key === 'fps') settings.fpsPref = v === 'auto' ? 'auto' : Number(v) as 30;
         if (key === 'tier') { settings.tierPref = v as 'auto'; toast('Tingkat grafis berlaku setelah game dimuat ulang.'); }
         if (key === 'timeMode') store.set('timeMode', v);
@@ -924,7 +928,7 @@ let net: Net | null = null;
 
   // ---------- loop utama dengan batas FPS ----------
   const npcs = simulatedPlayers();
-  let npcT = 0, last = performance.now(), lastRender = 0, bumpUntil = 0, clockT = 0, netT = 0, frames = 0, fpsT = 0, fpsShown = 0, time = 0, miniT = 0, ctxT = 0, npcSyncT = 0;
+  let npcT = 0, last = performance.now(), bumpUntil = 0, clockT = 0, netT = 0, frames = 0, fpsT = 0, fpsShown = 0, time = 0, miniT = 0, ctxT = 0, npcSyncT = 0;
   // NPC pejalan (mode lokal): mondar-mandir dermaga ↔ keramba lewat titian
   const npcWalker = npcs.find(n => n.pose === 'walk');
   const npcRoute = (() => {
@@ -949,14 +953,17 @@ let net: Net | null = null;
     renderer.setScissorTest(false); renderer.setViewport(0, 0, innerWidth, innerHeight);
   }
   rig.snap(fishing);
+  // siapkan semua shader di awal (ikan, cipratan, hujan, kartu tangkapan…): tanpa ini HP berhenti sesaat (patah) saat
+  // benda itu pertama kali muncul, mis. ketika ikan menyambar. compileAsync memakai kompilasi paralel bila HP mendukung.
+  void renderer.compileAsync(scene, cam).then(() => renderer.compileAsync(thumbScene, thumbCam)).catch(() => {});
   function loop(now: number) {
     requestAnimationFrame(loop);
     if (document.hidden) { last = now; return; }
     const menu = fishing.mode === 'menu';
     const activity = menu ? 'menu' : (now < bumpUntil ? 'active' : fishing.activity);
     const target = targetFps(activity);
-    if (now - lastRender < 1000 / target - 2) return;
-    const dt = Math.max(0, Math.min(0.1, (now - last) / 1000)); last = now; lastRender = now;
+    if (!pacer.tick(now, target)) return;
+    const dt = Math.max(0, Math.min(0.1, (now - last) / 1000)); last = now;
     time += dt;
     const hour = worldHour();
     // berjalan: joystick + papan ketik
@@ -1013,12 +1020,17 @@ let net: Net | null = null;
     } else if (net) {
       netT -= dt; if (netT < 0) { netT = 0.2; const r = fishing.angler.root; net.state(r.position.x, r.position.z, r.rotation.y, poseNow); }
     }
+    // resolusi dinamis: diterapkan SEBELUM menggambar (mengubah ukuran kanvas mengosongkannya — kalau sesudah, layar berkedip)
+    {
+      const hold = fishing.mode === 'fight' || fishing.mode === 'landing';
+      dyn.tick(dt, target, hold);
+      if (!hold && Math.abs(dyn.dpr - renderer.getPixelRatio()) > 0.01) { renderer.setPixelRatio(dyn.dpr); composer?.setPixelRatio(dyn.dpr); }
+    }
     world.water.renderReflection(renderer, scene, cam);
     // potret pemain di HUD: diambil dari kamera kecil di depan wajah (sekali tiap ganti tampilan)
     if (thumbReq) { const q = thumbReq; thumbReq = null; snapFish(q); }
     if (avaDirty && !menu && !sheetOpen() && (fishing.mode === 'ready' || fishing.mode === 'waiting') && time > 1.5) { avaDirty = false; snapAvatar(); }
     if (composer) composer.render(); else renderer.render(scene, cam);
-    if (dyn.tick(dt, target)) { renderer.setPixelRatio(dyn.dpr); composer?.setPixelRatio(dyn.dpr); }
     clockT -= dt;
     if (clockT < 0 && !menu) {
       clockT = 1;
@@ -1038,7 +1050,7 @@ let net: Net | null = null;
         const lvl = slow >= 0.9 && over <= 1 ? 'ok' : slow >= 0.7 && over <= 1.3 ? 'warn' : 'bad';
         fb.className = 'fps ' + lvl + (fpsDetail ? ' det' : '');
         const m = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
-        fb.innerHTML = `<b>${fpsShown}</b> FPS / ${target} · ${tier} · ${dyn.dpr.toFixed(2)}x` + (fpsDetail
+        fb.innerHTML = `<b>${fpsShown}</b> FPS / ${target} · ${tier} · ${dyn.dpr.toFixed(2)}x · ${pacer.refreshHz} Hz${saverOn() ? ' · hemat' : ''}` + (fpsDetail
           ? `<br>${dc}/${B.calls} gambar · ${(tri / 1000).toFixed(0)}k/${(B.tris / 1000).toFixed(0)}k segitiga<br>${i.memory.geometries} geometri · ${i.memory.textures} tekstur${m ? ' · JS ' + (m.usedJSHeapSize / 1048576).toFixed(0) + ' MB' : ''}`
           : ` · ${dc} dc · ${(tri / 1000).toFixed(0)}k tri`);
       }

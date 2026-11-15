@@ -4,6 +4,8 @@ import * as THREE from 'three';
 import { groundH, LAKE, WATER_Y, LOC, FLOW, IS_SERENE } from './layout';
 import { Q } from '../core/quality';
 import { FAR } from './farcut';
+// objek bantu pantulan yang dipakai ulang tiap gambar (mengurangi sampah memori → mengurangi patah-patah)
+const WT = { p: new THREE.Vector3(), t: new THREE.Vector3(), u: new THREE.Vector3(), n: new THREE.Vector3(), pl: new THREE.Plane(), cp: new THREE.Vector4(), q: new THREE.Vector4() };
 
 const MAX_RIPPLES = 12;
 
@@ -157,18 +159,18 @@ export class Water extends THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>
     const mc = this.mirrorCam;
     mc.copy(cam);
     // cerminkan posisi dan arah kamera terhadap y = WATER_Y
-    const p = cam.position.clone(); p.y = 2 * WATER_Y - p.y;
-    const target = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion).add(cam.position); target.y = 2 * WATER_Y - target.y;
-    mc.position.copy(p); mc.up.set(0, -1, 0).applyQuaternion(new THREE.Quaternion()); mc.up.set(0, 1, 0);
-    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion); up.y = -up.y;
+    const p = WT.p.copy(cam.position); p.y = 2 * WATER_Y - p.y;
+    const target = WT.t.set(0, 0, -1).applyQuaternion(cam.quaternion).add(cam.position); target.y = 2 * WATER_Y - target.y;
+    mc.position.copy(p);
+    const up = WT.u.set(0, 1, 0).applyQuaternion(cam.quaternion); up.y = -up.y;
     mc.up.copy(up); mc.lookAt(target);
     mc.layers.set(0);
     mc.updateMatrixWorld(); mc.projectionMatrix.copy(cam.projectionMatrix);
     // bidang potong miring (oblique clipping) supaya benda di bawah air tidak ikut terpantul
-    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -WATER_Y + 0.02);
+    const plane = WT.pl.set(WT.n.set(0, 1, 0), -WATER_Y + 0.02);
     plane.applyMatrix4(mc.matrixWorldInverse);
-    const cp = new THREE.Vector4(plane.normal.x, plane.normal.y, plane.normal.z, plane.constant);
-    const pm = mc.projectionMatrix, q = new THREE.Vector4();
+    const cp = WT.cp.set(plane.normal.x, plane.normal.y, plane.normal.z, plane.constant);
+    const pm = mc.projectionMatrix, q = WT.q;
     q.x = (Math.sign(cp.x) + pm.elements[8]) / pm.elements[0];
     q.y = (Math.sign(cp.y) + pm.elements[9]) / pm.elements[5];
     q.z = -1.0; q.w = (1.0 + pm.elements[10]) / pm.elements[14];

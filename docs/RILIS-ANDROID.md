@@ -16,6 +16,21 @@ Semua dibangun di **GitHub Actions**, jadi komputer Anda tidak perlu Android Stu
 - Selesai ±10 menit → buka hasilnya → **Artifacts → paunjunan-debug-apk** → unduh, ekstrak, kirim `.apk` ke HP → pasang (izinkan "Instal aplikasi tidak dikenal").
 - APK uji tidak bisa membeli koin sungguhan (pembelian hanya jalan dari Play Store), selebihnya sama.
 
+## B2. Peringatan Play Protect / "aplikasi tidak bisa dipasang" saat memasang APK uji
+Sejak **30 September 2026**, HP Android bersertifikat di **Indonesia** (juga Brasil, Singapura, Thailand) hanya memasang
+aplikasi dari **developer yang terverifikasi Google** — termasuk APK yang dipasang manual. APK debug juga ditandatangani kunci
+acak yang berbeda tiap build, sehingga Play Protect menganggapnya mencurigakan. Solusinya, berurutan:
+1. **Kunci tanda tangan tetap** (langkah C): isi 4 secret kunci → workflow *Build Android* otomatis membuat APK **rilis
+   bertanda tangan** (bukan debug). Pembaruan bisa dipasang di atas versi lama tanpa copot.
+   *Satu kali saja*: copot APK uji lama (bertanda tangan debug) sebelum memasang APK bertanda tangan pertama.
+2. **Daftarkan diri & aplikasi** di verifikasi developer Google: <https://developer.android.com/developer-verification>
+   - Akun **distribusi terbatas** (gratis, tanpa KTP, maks. 20 HP) cukup untuk uji coba bersama teman.
+   - Akun **Play Console** (US$ 25) untuk terbit di Play Store; identitas Anda diverifikasi di sana.
+   - Daftarkan aplikasi: nama paket `com.paunjunan.mancing` + sidik jari **SHA-256** kunci (ada di file KUNCI-ANDROID-RAHASIA.txt).
+3. **Paling mulus**: bagikan lewat **Play Console → Testing → Internal testing** (penguji memasang dari Play Store, tanpa peringatan).
+4. Sementara menunggu: pada dialog Play Protect pilih *Detail lainnya → Tetap instal*, atau pasang lewat kabel USB dengan
+   `adb install paunjunan.apk` (ADB tidak terkena verifikasi).
+
 ## C. Kunci tanda tangan (sekali seumur aplikasi)
 Di komputer yang punya Java (atau minta tolong yang punya):
 ```
@@ -23,6 +38,8 @@ keytool -genkey -v -keystore paunjunan.jks -keyalg RSA -keysize 2048 -validity 1
 base64 -w0 paunjunan.jks > paunjunan.jks.txt        # Windows: certutil -encode paunjunan.jks paunjunan.jks.txt
 ```
 Tambahkan secret: `ANDROID_KEYSTORE_BASE64` (isi paunjunan.jks.txt), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (= `paunjunan`), `ANDROID_KEY_PASSWORD`.
+(Kunci untuk PAUNJUNAN sudah dibuatkan pada 15 Nov 2026: `paunjunan-upload.jks` + `KUNCI-ANDROID-RAHASIA.txt` berisi isian keempat secret.)
+APK uji memakai nomor versi = nomor build GitHub (`uji-N`); untuk HP yang sama, nomor versi rilis Play harus lebih besar dari N terakhir.
 **Simpan `paunjunan.jks` + sandinya di 2 tempat aman.** Dengan *Play App Signing* (langkah D) kunci ini hanya kunci unggah — bila hilang masih bisa diganti lewat dukungan Google, tapi merepotkan.
 
 Lalu **Actions → Rilis Android → Run workflow**, isi nomor versi (`2`, `3`, … selalu naik) dan nama versi (`1.0.0`). Hasil: `.aab` (untuk Play Store) dan `.apk` bertanda tangan.
@@ -95,3 +112,6 @@ Pembaruan berikutnya: naikkan nomor versi di workflow *Rilis Android* → unggah
 - **Tombol Kembali**: tutup panel → tutup kartu "ikan lepas" → (saat adu tarik/kartu tangkapan: diabaikan dengan pesan) → hentikan mancing otomatis / jalan otomatis → kembali ke menu utama → konfirmasi keluar.
 - **Ditinggal** (pindah aplikasi, layar dikunci, telepon): suara berhenti, mancing otomatis berhenti dengan ringkasan; **dibuka lagi**: suara lanjut, sambungan server langsung disambung ulang, data pemain disegarkan bila ditinggal > 2 menit.
 - Ikon adaptif (termasuk ikon bertema Android 13+), layar pembuka gelap tanpa kilatan putih.
+- **Mulus & tidak cepat panas** (v0.9.8): irama gambar selaras layar 60/90/120 Hz (30 FPS rata), resolusi dinamis yang tenang
+  (berubah jarang & sebelum menggambar → tanpa kedip), shader disiapkan di awal (tanpa sentakan saat ikan menyambar), efek kaca
+  buram dimatikan di HP, bayangan tidak merayap, pengaturan **Main lama (hemat baterai)** — otomatis nyala saat baterai < 20%.

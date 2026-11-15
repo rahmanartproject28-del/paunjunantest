@@ -1,6 +1,6 @@
-# SERAH TERIMA — PAUNJUNAN v2 · versi 0.9.7
+# SERAH TERIMA — PAUNJUNAN v2 · versi 0.9.8
 
-> Diperbarui 15 November 2026 (v0.9.7). Untuk melanjutkan di akun Claude lain, lampirkan di percakapan baru:
+> Diperbarui 15 November 2026 (v0.9.8). Untuk melanjutkan di akun Claude lain, lampirkan di percakapan baru:
 > 1. **`PAUNJUNAN-LENGKAP-v0.9.7.zip`** — WAJIB. Isi: `1-game-dan-server/` (kode game + server + shared + aset game + alat uji offline), `2-website-ci4/` (website peringkat + panel pengelola, CodeIgniter 4.7), prototipe siap main, dokumen ini, `REKAP-FITUR-PAUNJUNAN.md`, `ASET-BACA-DULU.md`, `PANDUAN-GERAKAN-DAN-KENYAMANAN.md`.
 > 2. (hanya bila mau memasang aset/animasi tambahan) paket aset, dipecah 5 berkas supaya tiap berkas di bawah batas unggah 30 MB: `aset-1-animasi.zip`, `aset-2-ikan-air-efek-suara.zip`, `aset-3-langit.zip`, `aset-4-tanah.zip`, `aset-5-properti.zip`. `tools/make-motion.py` butuh `aset-1-animasi.zip` (folder `1-animasi-avatar/rpm-pria`; nama subfolder `idle/` dan `locomotion/` sama dengan aslinya).
 >
@@ -116,7 +116,14 @@ Folder `2-website-ci4/` (repo terpisah di sandbox: `/home/claude/web/paunjunan-w
 - **Panduan**: `docs/RILIS-ANDROID.md` — GitHub, APK uji, kunci, Play Console (isian App content & **Data safety**), produk `koin_*`, service account server, *license testers*, uji tertutup 12 penguji × 14 hari (akun pribadi baru), produksi, daftar periksa.
 - Uji: 83 lulus (baru: tombol kembali 4, pembelian 3). Belum dicoba di HP sungguhan.
 - **GitHub (15 Nov 2026)**: repo privat **`rahmanartproject28-del/paunjunantest`** (isi = folder game ini, cabang `main`, Claude GitHub App terpasang → sesi Claude bisa push). Workflow **Build Android** lulus (run #4): npm test → vite build → cap sync → gradle assembleDebug → artifact + **Release prarilis `uji-N`** berisi `paunjunan-uji-N.apk` (unduh langsung dari HP). Perbaikan saat build pertama: YAML `concurrency` (flow-map dengan `${{ }}`), `versionCode = (...).toInteger()` di app/build.gradle. APK 8,1 MB (web 3,2 MB); bundel web APK dijalankan di Chromium 800×360 tanpa galat. Status run bisa dibaca lewat `curl https://api.github.com/repos/rahmanartproject28-del/paunjunantest/actions/runs` (proxy sesi menyertakan izin); unduhan artifact (blob Azure) diblokir proxy, tetapi aset Release bisa diunduh dengan `-H 'Accept: application/octet-stream' .../releases/assets/ID`.
-- Belum: secret `GAME_SERVER_URL` (APK uji masih mode lokal), secret kunci tanda tangan untuk *Rilis Android*, iOS. iOS (proyek Xcode, StoreKit + verifikasi JWS App Store di server, workflow TestFlight) ditunda sampai Android selesai.
+- Belum: secret `GAME_SERVER_URL` (APK uji masih mode lokal), secret kunci tanda tangan untuk *Rilis Android*, iOS.
+
+### v0.9.8 — Kedipan, patah-patah, Play Protect (laporan pemilik dari HP sungguhan)
+- **Kedipan**: penyebab utama `DynRes` mengubah `setPixelRatio` SETELAH menggambar (kanvas dikosongkan → bingkai kosong tampil) dan naik-turun tiap 2 dtk (target 24↔30 mengacaukan ukuran FPS). Kini: diterapkan sebelum render, jenjang [1, .85, .72, .6], turun setelah 2×2 dtk lambat, naik setelah 12 dtk lancar & ≥20 dtk sejak ubah (jeda naik digandakan bila gagal), tidak berubah saat adu tarik, jeda aplikasi diabaikan. Resize → `pacer.force()` (render seketika). `backdrop-filter` dimatikan di HP (`html.mobile`, panel lebih pekat). Bayangan dikunci ke kisi texel (sky.ts). Pantulan `sedang` tiap gambar (reflScale .3; dulu tiap 2 gambar → bergetar).
+- **Patah-patah**: `FramePacer` (quality.ts) menghitung kedipan layar (estimasi vsync) → 30 FPS = tiap 2/3/4 vsync di 60/90/120 Hz, jarak rata (dulu 24 FPS di 60 Hz = selang-seling 33/50 ms). HP kini 30 FPS tetap (20 saat menunggu bila hemat baterai). `renderer.compileAsync(scene)` + thumbScene di awal. Objek bantu dipakai ulang di pantulan air & bayangan.
+- **Main lama (hemat baterai)** di Pengaturan: Otomatis (baterai < 20% & tidak diisi, Battery API) / Nyala / Mati → DPR ×0,85 + 20 FPS saat menunggu. Kotak FPS menampilkan Hz layar & status hemat.
+- **Play Protect / verifikasi developer**: sejak 30 Sep 2026 HP bersertifikat di Indonesia hanya memasang aplikasi dari developer terverifikasi; APK debug memakai kunci acak tiap build. Kunci unggah tetap dibuat (`paunjunan-upload.jks`, PKCS12, alias `paunjunan`, SHA-256 `0C:75:E3:4C:…:2A:E8`) dan diserahkan ke pemilik (TIDAK disimpan di repo). Workflow *Build Android*: bila 4 secret kunci ada → `assembleRelease` bertanda tangan (versionCode = nomor run), selain itu debug. Panduan B2 di RILIS-ANDROID.md (daftar verifikasi developer: akun distribusi terbatas gratis 20 HP, atau Play Console + internal testing).
+- Uji: +7 (`core/quality.test.ts`: irama 60/90/120 Hz, DynRes tenang). iOS (proyek Xcode, StoreKit + verifikasi JWS App Store di server, workflow TestFlight) ditunda sampai Android selesai.
 
 ## 1. Keputusan yang sudah disepakati
 

@@ -4,6 +4,9 @@ import * as THREE from 'three';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
 import type { WeatherId } from '@paunjunan/shared';
 
+// vektor bantu yang dipakai ulang tiap gambar (tanpa sampah memori → tanpa jeda pembersihan memori)
+const SKY_T = { f: new THREE.Vector3(), r: new THREE.Vector3(), u: new THREE.Vector3(), p: new THREE.Vector3() };
+
 function cloudNoiseTexture(size = 256) {
   // derau FBM yang bisa diulang (tileable) untuk awan
   const c = document.createElement('canvas'); c.width = c.height = size;
@@ -175,9 +178,17 @@ export class SkySystem {
     cm.uniforms.photoTint.value.setRGB(1, 1, 1).lerp(warm.clone().multiplyScalar(1.25), (1 - h) * 0.25).multiplyScalar(0.92 + h * 0.08);
 
 
-    // bayangan mengikuti pemain
-    this.sun.position.copy(focus).addScaledVector(this.sunDir, 60);
-    this.sun.target.position.copy(focus);
+    // bayangan mengikuti pemain — titik fokus "dikunci" ke kisi texel peta bayangan (di ruang cahaya) supaya tepi bayangan
+    // tidak merayap/berkedip saat pemain atau kamera bergerak
+    const sc = this.sun.shadow.camera as THREE.OrthographicCamera, ms = this.sun.shadow.mapSize.x || 1024;
+    const texel = (sc.right - sc.left) / ms;
+    const fw = SKY_T.f.copy(this.sunDir).negate().normalize();
+    const rt = SKY_T.r.set(0, 1, 0).cross(fw); if (rt.lengthSq() < 1e-6) rt.set(1, 0, 0); rt.normalize();
+    const up = SKY_T.u.copy(fw).cross(rt);
+    const su = Math.round(focus.dot(rt) / texel) * texel, sv = Math.round(focus.dot(up) / texel) * texel, sw = focus.dot(fw);
+    const snapped = SKY_T.p.copy(rt).multiplyScalar(su).addScaledVector(up, sv).addScaledVector(fw, sw);
+    this.sun.position.copy(snapped).addScaledVector(this.sunDir, 60);
+    this.sun.target.position.copy(snapped);
 
     // cahaya lingkungan (PMREM) diperbarui hanya bila langit berubah cukup banyak
     const key = Math.round(hour * 4) + weather;
